@@ -484,17 +484,21 @@ async function fetchAllVideos() {
   // 全動画IDを取得（50件ずつページネーション）
   const videoIds = [];
   let pageToken = null;
+  let pageCount = 0;
   do {
     const params = { part: 'contentDetails', playlistId: uploadsId, maxResults: 50 };
     if (pageToken) params.pageToken = pageToken;
     const pl = await apiGet('playlistItems', params);
     videoIds.push(...pl.items.map(i => i.contentDetails.videoId));
     pageToken = pl.nextPageToken || null;
+    pageCount++;
   } while (pageToken);
+  console.log(`[fetch] playlistItems: ${pageCount}ページ, 計${videoIds.length}件のID取得`);
 
   // 動画の統計・情報を50本ずつバッチ取得
   const now = Date.now();
   const cutoff7d = now - 7 * 24 * 3600 * 1000;
+  let storedCount = 0, skippedLive = 0, skippedShort = 0, skippedUpcoming = 0;
 
   for (let i = 0; i < videoIds.length; i += 50) {
     const batch = videoIds.slice(i, i + 50);
@@ -502,13 +506,20 @@ async function fetchAllVideos() {
       part: 'statistics,snippet,contentDetails,liveStreamingDetails',
       id: batch.join(',')
     });
-    for (const item of vRes.items) {
+    for (const item of (vRes.items || [])) {
       // 公開前・配信中は除外、ショート(60秒以下)も除外
       const lbc = item.snippet.liveBroadcastContent;
-      if (lbc === 'live' || lbc === 'upcoming') continue;
-      if (parseDuration(item.contentDetails.duration) <= 60) continue;
-      // liveStreamingDetailsがあればライブアーカイブ
-      const isLive = !!item.liveStreamingDetails;
+      if (lbc === 'live')     { skippedLive++;     continue; }
+      if (lbc === 'upcoming') { skippedUpcoming++; continue; }
+      // 再生数が取れない動画（メンバー限定等）は除外
+      if (item.statistics?.viewCount === undefined) continue;
+
+      const dur = parseDuration(item.contentDetails?.duration || '');
+      if (dur <= 60) { skippedShort++; continue; }
+
+      // プレミア公開の曲動画もliveStreamingDetailsを持つため、
+      // 30分(1800秒)以上のものだけライブアーカイブと判定する
+      const isLive = !!item.liveStreamingDetails && dur > 1800;
 
       const views = parseInt(item.statistics.viewCount || '0');
       const thumb = item.snippet.thumbnails.medium?.url
@@ -534,8 +545,10 @@ async function fetchAllVideos() {
       }
       // 7日より古い履歴を削除
       store.videos[item.id].history = hist.filter(h => h.ts >= cutoff7d);
+      storedCount++;
     }
   }
+  console.log(`[fetch] 保存: ${storedCount}件 / スキップ: live=${skippedLive} upcoming=${skippedUpcoming} short=${skippedShort}`);
 
   store.lastUpdated = now;
   saveStore();
