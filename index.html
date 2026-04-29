@@ -615,15 +615,20 @@ function calcGrowthPerDay(history) {
   const now = Date.now();
   const cutoff72h = now - 72 * 3600 * 1000;
   // 直近72時間のデータを優先、足りなければ全履歴
-  let window = history.filter(h => h.ts >= cutoff72h);
-  if (window.length < 2) window = history;
-  if (window.length < 2) return null;
+  let win = history.filter(h => h.ts >= cutoff72h);
+  if (win.length < 2) win = history;
+  if (win.length < 2) return null;
 
-  const oldest = window[0];
-  const latest = window[window.length - 1];
-  const days = (latest.ts - oldest.ts) / (24 * 3600 * 1000);
-  if (days < 0.01) return null;
-  return (latest.views - oldest.views) / days;
+  // 最小二乗法で増加速度を推定（全中間点を活用）
+  const n = win.length;
+  const xs = win.map(h => h.ts / 86400000); // msを日単位に変換
+  const ys = win.map(h => h.views);
+  const xMean = xs.reduce((a, b) => a + b) / n;
+  const yMean = ys.reduce((a, b) => a + b) / n;
+  const num = xs.reduce((s, x, i) => s + (x - xMean) * (ys[i] - yMean), 0);
+  const den = xs.reduce((s, x)    => s + (x - xMean) ** 2, 0);
+  if (den < 1e-9) return null;
+  return num / den; // [views/day]
 }
 
 function getRecentlyAchieved(history) {
