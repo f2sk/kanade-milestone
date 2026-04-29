@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>再生マイルストーン — 音乃瀬奏</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #080d15;
+  color: #c8d8e8;
+  font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+  min-height: 100vh;
+}
+
+/* ── Header ──────────────────────────────────────── */
+.header {
+  background: #0c1520;
+  border-bottom: 1px solid #1a2a3a;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.header-title { font-size: 13px; font-weight: bold; letter-spacing: 1px; color: #4a9eff; white-space: nowrap; }
+.header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.last-updated { font-size: 10px; color: #2a5a7a; }
+
+.btn {
+  background: #0d1e30;
+  border: 1px solid #2a4a6a;
+  border-radius: 5px;
+  color: #4a8aaa;
+  font-family: inherit;
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn:hover { border-color: #4a9eff; color: #4a9eff; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn.primary { border-color: #2a7acc; color: #4a9eff; }
+.btn.danger { border-color: #4a1515; color: #cc4444; }
+.btn.danger:hover { border-color: #cc4444; }
+
+/* ── Stats bar ────────────────────────────────────── */
+.stats-bar {
+  display: flex;
+  gap: 16px;
+  padding: 7px 16px;
+  background: #0a1018;
+  border-bottom: 1px solid #0f1e2e;
+  font-size: 11px;
+}
+.stat-item { display: flex; align-items: center; gap: 5px; }
+.stat-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: bold;
+}
+.stat-badge.approaching { background: #3a2800; color: #ffaa00; border: 1px solid #ffaa0060; }
+.stat-badge.achieved    { background: #3a2a00; color: #ffd700; border: 1px solid #ffd70060; }
+.stat-label { color: #3a6a8a; }
+.stat-count { color: #c8d8e8; font-weight: bold; }
+
+/* ── Card grid ────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  padding: 12px;
+}
+
+.card {
+  background: #0e1826;
+  border: 1px solid #1a2a3a;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color .2s, box-shadow .2s;
+}
+.card.approaching {
+  border-color: #cc8800;
+  box-shadow: 0 0 14px #ffaa0025;
+}
+.card.achieved {
+  border-color: #aa8800;
+  box-shadow: 0 0 18px #ffd70030;
+  animation: pulse-gold 2s ease-in-out infinite;
+}
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 18px #ffd70030; }
+  50%       { box-shadow: 0 0 28px #ffd70060; }
+}
+
+.card-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+  background: #0a1520;
+}
+.card-body { padding: 8px 10px 10px; }
+
+.card-title {
+  font-size: 11px;
+  line-height: 1.45;
+  color: #a8c8e0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 8px;
+  min-height: 32px;
+}
+
+.views-row { display: flex; align-items: baseline; gap: 5px; margin-bottom: 7px; }
+.views-count { font-size: 22px; font-weight: bold; color: #e8f0ff; font-variant-numeric: tabular-nums; }
+.views-unit  { font-size: 11px; color: #3a6a8a; }
+
+/* ── Achievement badge ─────────────────────────────── */
+.achieved-badge {
+  background: linear-gradient(135deg, #2a1a00, #3a2a00);
+  border: 1px solid #aa880060;
+  border-radius: 6px;
+  padding: 5px 9px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.achieved-icon { font-size: 14px; }
+.achieved-text { font-size: 11px; color: #ffd700; font-weight: bold; }
+
+/* ── Milestone row ─────────────────────────────────── */
+.milestone-row {
+  background: #080f18;
+  border-radius: 6px;
+  padding: 6px 9px;
+  margin-bottom: 5px;
+}
+.milestone-label { font-size: 9px; color: #2a5a7a; letter-spacing: 1px; margin-bottom: 3px; }
+.milestone-next  { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.milestone-target    { font-size: 14px; font-weight: bold; color: #6ab0ff; }
+.milestone-remaining { font-size: 10px; color: #4a7a9a; }
+.milestone-eta { font-size: 11px; font-weight: bold; white-space: nowrap; }
+.milestone-eta.soon    { color: #ffaa00; }
+.milestone-eta.normal  { color: #3a7a9a; }
+.milestone-eta.unknown { color: #2a4a6a; }
+
+.progress-wrap { height: 3px; background: #0a1520; border-radius: 2px; margin-top: 5px; overflow: hidden; }
+.progress-bar  { height: 100%; border-radius: 2px; transition: width .4s; }
+.progress-bar.approaching { background: linear-gradient(90deg, #886600, #ffaa00); }
+.progress-bar.normal      { background: linear-gradient(90deg, #1a4a8a, #4a9eff); }
+
+.growth-row { font-size: 9px; color: #2a5a7a; margin-top: 4px; text-align: right; }
+
+/* ── Status messages ───────────────────────────────── */
+.status-msg { text-align: center; padding: 60px 20px; font-size: 13px; color: #3a6a8a; }
+.error-msg {
+  background: #1a0808;
+  border: 1px solid #4a1515;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 12px;
+  font-size: 12px;
+  color: #cc4444;
+  line-height: 1.6;
+}
+
+/* ── Setup screen ──────────────────────────────────── */
+.setup-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  padding: 24px;
+}
+.setup-box {
+  background: #0e1826;
+  border: 1px solid #1a2a3a;
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.setup-title { font-size: 15px; font-weight: bold; color: #4a9eff; }
+.setup-desc  { font-size: 11px; color: #4a7a9a; line-height: 1.7; }
+
+.field-label { font-size: 11px; color: #4a7a9a; margin-bottom: 4px; }
+.field-input {
+  width: 100%;
+  background: #060d18;
+  border: 1px solid #1a3a5a;
+  border-radius: 5px;
+  color: #c8d8e8;
+  font-size: 12px;
+  padding: 8px 10px;
+  font-family: 'Courier New', monospace;
+}
+.field-input:focus { outline: none; border-color: #4a9eff; }
+
+/* ── Settings modal ────────────────────────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #000a;
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: #0e1826;
+  border: 1px solid #1a3a5a;
+  border-radius: 12px;
+  padding: 20px;
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.modal-title  { font-size: 13px; font-weight: bold; color: #4a9eff; letter-spacing: 1px; }
+.modal-footer { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ── Responsive ─────────────────────────────────────── */
+@media (max-width: 480px) {
+  .grid { grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px; }
+  .views-count { font-size: 18px; }
+  .milestone-target { font-size: 12px; }
+}
+@media (max-width: 360px) {
+  .grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">🎵 再生マイルストーン — 音乃瀬奏</div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated">未取得</span>
+    <button class="btn primary" id="refreshBtn" onclick="doRefresh()">更新</button>
+    <button class="btn" onclick="openSettings()">⚙</button>
+  </div>
+</div>
+
+<div class="stats-bar" id="statsBar" style="display:none">
+  <div class="stat-item">
+    <span class="stat-badge approaching">もうすぐ</span>
+    <span class="stat-count" id="statApproaching">0</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-badge achieved">達成(48h)</span>
+    <span class="stat-count" id="statAchieved">0</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-label">全</span>
+    <span class="stat-count" id="statTotal">0</span>
+    <span class="stat-label">本</span>
+  </div>
+</div>
+
+<div id="mainContent">
+  <div class="status-msg">読み込み中...</div>
+</div>
+
+<!-- Settings modal -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal-box">
+    <div class="modal-title">⚙ 設定</div>
+    <div>
+      <div class="field-label">YouTube Data API Key</div>
+      <input class="field-input" type="password" id="cfgApiKey" placeholder="AIza...">
+    </div>
+    <div>
+      <div class="field-label">チャンネルハンドル（@不要）</div>
+      <input class="field-input" type="text" id="cfgChannel" placeholder="OtonoseKanade">
+    </div>
+    <div>
+      <div class="field-label">「もうすぐ」閾値（日）</div>
+      <input class="field-input" type="number" id="cfgThreshold" value="3" min="1" max="30">
+    </div>
+    <div>
+      <div class="field-label">自動更新間隔（分）</div>
+      <input class="field-input" type="number" id="cfgInterval" value="30" min="5" max="120">
+    </div>
+    <div class="modal-footer">
+      <button class="btn danger" onclick="clearData()">データ削除</button>
+      <button class="btn" onclick="closeSettings()">キャンセル</button>
+      <button class="btn primary" onclick="saveSettings()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── マイルストーン生成（C案）────────────────────────
+// 10万刻み(〜90万) → 100万刻み(〜900万) → 500万刻み(1000万〜)
+const MILESTONES = (() => {
+  const m = [];
+  for (let i = 1; i <= 9; i++) m.push(i * 100_000);
+  for (let i = 1; i <= 9; i++) m.push(i * 1_000_000);
+  for (let i = 2; i <= 40; i++) m.push(i * 5_000_000);
+  return m;
+})();
+
+function getNextMilestone(views) {
+  return MILESTONES.find(m => m > views) || null;
+}
+
+function getPrevMilestone(views) {
+  return [...MILESTONES].reverse().find(m => m <= views) || 0;
+}
+
+// ─── ストレージ ───────────────────────────────────────
+const STORE_KEY = 'kanade_milestone_tracker';
+
+let store = {
+  settings: {
+    apiKey: '',
+    channelHandle: 'OtonoseKanade',
+    thresholdDays: 3,
+    refreshMinutes: 30
+  },
+  videos: {},
+  lastUpdated: null
+};
+
+function loadStore() {
+  try {
+    const s = localStorage.getItem(STORE_KEY);
+    if (s) {
+      const parsed = JSON.parse(s);
+      store = { ...store, ...parsed, settings: { ...store.settings, ...parsed.settings } };
+    }
+  } catch(e) {}
+}
+
+function saveStore() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch(e) {}
+}
+
+// ─── フォーマット ──────────────────────────────────────
+function fmtViewsUnit(n) {
+  if (n >= 100_000_000) return { val: (n / 100_000_000).toFixed(2), unit: '億' };
+  if (n >= 10_000)      return { val: (n / 10_000).toFixed(1),       unit: '万' };
+  return { val: n.toLocaleString(), unit: '' };
+}
+
+function fmtViews(n) {
+  const { val, unit } = fmtViewsUnit(n);
+  return val + unit;
+}
+
+function fmtMilestone(n) {
+  if (n >= 100_000_000) return (n / 100_000_000) + '億';
+  if (n >= 10_000)      return (n / 10_000) + '万';
+  return n.toLocaleString();
+}
+
+function fmtDays(days) {
+  if (days < 0.5) return '今日中！';
+  if (days < 1.5) return '明日';
+  return `約${Math.ceil(days)}日後`;
+}
+
+function fmtDatetime(ts) {
+  const d = new Date(ts);
+  return `${d.getMonth()+1}/${d.getDate()} `
+       + `${String(d.getHours()).padStart(2,'0')}:`
+       + `${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── YouTube Data API ──────────────────────────────────
+async function apiGet(endpoint, params) {
+  const url = new URL(`https://www.googleapis.com/youtube/v3/${endpoint}`);
+  params.key = store.settings.apiKey;
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = data.error?.message || res.statusText;
+    throw new Error(`YouTube API エラー [${res.status}]: ${msg}`);
+  }
+  return data;
+}
+
+async function fetchAllVideos() {
+  // チャンネルのuploadsプレイリストIDを取得
+  const chRes = await apiGet('channels', {
+    part: 'contentDetails',
+    forHandle: store.settings.channelHandle
+  });
+  if (!chRes.items?.length) {
+    throw new Error('チャンネルが見つかりません: ' + store.settings.channelHandle);
+  }
+  const uploadsId = chRes.items[0].contentDetails.relatedPlaylists.uploads;
+
+  // 全動画IDを取得（50件ずつページネーション）
+  const videoIds = [];
+  let pageToken = null;
+  do {
+    const params = { part: 'contentDetails', playlistId: uploadsId, maxResults: 50 };
+    if (pageToken) params.pageToken = pageToken;
+    const pl = await apiGet('playlistItems', params);
+    videoIds.push(...pl.items.map(i => i.contentDetails.videoId));
+    pageToken = pl.nextPageToken || null;
+  } while (pageToken);
+
+  // 動画の統計・情報を50本ずつバッチ取得
+  const now = Date.now();
+  const cutoff7d = now - 7 * 24 * 3600 * 1000;
+
+  for (let i = 0; i < videoIds.length; i += 50) {
+    const batch = videoIds.slice(i, i + 50);
+    const vRes = await apiGet('videos', {
+      part: 'statistics,snippet',
+      id: batch.join(',')
+    });
+    for (const item of vRes.items) {
+      const views = parseInt(item.statistics.viewCount || '0');
+      const thumb = item.snippet.thumbnails.medium?.url
+                 || item.snippet.thumbnails.default?.url || '';
+
+      if (!store.videos[item.id]) {
+        store.videos[item.id] = {
+          title: item.snippet.title,
+          thumbnail: thumb,
+          publishedAt: item.snippet.publishedAt,
+          history: []
+        };
+      }
+      store.videos[item.id].title     = item.snippet.title;
+      store.videos[item.id].thumbnail = thumb;
+
+      const hist = store.videos[item.id].history;
+      // 直前と同じ再生数なら追記しない（タイムスタンプのみ更新）
+      if (!hist.length || hist[hist.length - 1].views !== views) {
+        hist.push({ ts: now, views });
+      }
+      // 7日より古い履歴を削除
+      store.videos[item.id].history = hist.filter(h => h.ts >= cutoff7d);
+    }
+  }
+
+  store.lastUpdated = now;
+  saveStore();
+}
+
+// ─── 解析 ──────────────────────────────────────────────
+function calcGrowthPerDay(history) {
+  if (history.length < 2) return null;
+  const now = Date.now();
+  const cutoff72h = now - 72 * 3600 * 1000;
+  // 直近72時間のデータを優先、足りなければ全履歴
+  let window = history.filter(h => h.ts >= cutoff72h);
+  if (window.length < 2) window = history;
+  if (window.length < 2) return null;
+
+  const oldest = window[0];
+  const latest = window[window.length - 1];
+  const days = (latest.ts - oldest.ts) / (24 * 3600 * 1000);
+  if (days < 0.01) return null;
+  return (latest.views - oldest.views) / days;
+}
+
+function getRecentlyAchieved(history) {
+  if (history.length < 2) return null;
+  const cutoff48h = Date.now() - 48 * 3600 * 1000;
+  const recent = history.filter(h => h.ts >= cutoff48h);
+  if (recent.length === 0) return null;
+
+  const oldViews = recent[0].views;
+  const newViews = history[history.length - 1].views;
+  // 48時間で超えたマイルストーンのうち最大のものを返す
+  const achieved = MILESTONES.filter(m => oldViews < m && newViews >= m);
+  return achieved.length > 0 ? achieved[achieved.length - 1] : null;
+}
+
+function analyzeVideo(videoId) {
+  const video = store.videos[videoId];
+  if (!video || !video.history.length) return null;
+
+  const currentViews  = video.history[video.history.length - 1].views;
+  const nextMilestone = getNextMilestone(currentViews);
+  const growthPerDay  = calcGrowthPerDay(video.history);
+  const recentlyAchieved = getRecentlyAchieved(video.history);
+
+  let estimatedDays = null;
+  if (nextMilestone && growthPerDay > 0) {
+    estimatedDays = (nextMilestone - currentViews) / growthPerDay;
+  }
+
+  return {
+    id: videoId,
+    title:         video.title,
+    thumbnail:     video.thumbnail,
+    publishedAt:   video.publishedAt,
+    currentViews,
+    nextMilestone,
+    growthPerDay,
+    estimatedDays,
+    recentlyAchieved,
+    isApproaching:  estimatedDays !== null && estimatedDays <= store.settings.thresholdDays,
+    hasAchievement: recentlyAchieved !== null
+  };
+}
+
+// ─── レンダリング ───────────────────────────────────────
+function buildCard(a) {
+  const cardCls = a.hasAchievement ? 'achieved' : a.isApproaching ? 'approaching' : '';
+  const { val, unit } = fmtViewsUnit(a.currentViews);
+
+  // 進捗バー（前マイルストーン〜次マイルストーン間）
+  const prevMs = getPrevMilestone(a.currentViews);
+  const progressRatio = a.nextMilestone
+    ? (a.currentViews - prevMs) / (a.nextMilestone - prevMs)
+    : 1;
+
+  // ETA表示
+  let etaHtml;
+  if (a.estimatedDays !== null) {
+    const cls = a.isApproaching ? 'soon' : 'normal';
+    etaHtml = `<span class="milestone-eta ${cls}">${fmtDays(a.estimatedDays)}</span>`;
+  } else {
+    etaHtml = `<span class="milestone-eta unknown">勢い計算中</span>`;
+  }
+
+  const achievedHtml = a.hasAchievement ? `
+    <div class="achieved-badge">
+      <span class="achieved-icon">🎉</span>
+      <span class="achieved-text">${fmtMilestone(a.recentlyAchieved)}再生 達成！</span>
+    </div>` : '';
+
+  const milestoneHtml = a.nextMilestone ? `
+    <div class="milestone-row">
+      <div class="milestone-label">NEXT MILESTONE</div>
+      <div class="milestone-next">
+        <span class="milestone-target">${fmtMilestone(a.nextMilestone)}</span>
+        <span class="milestone-remaining">あと ${fmtViews(a.nextMilestone - a.currentViews)}</span>
+        ${etaHtml}
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-bar ${a.isApproaching ? 'approaching' : 'normal'}"
+             style="width:${Math.min(100, progressRatio * 100).toFixed(1)}%"></div>
+      </div>
+    </div>` : '';
+
+  const growthHtml = a.growthPerDay !== null
+    ? `+${fmtViews(Math.round(a.growthPerDay))}/日`
+    : 'データ蓄積中...';
+
+  const card = document.createElement('div');
+  card.className = `card ${cardCls}`;
+  card.innerHTML = `
+    <img class="card-thumb" src="${escHtml(a.thumbnail)}" loading="lazy" alt="">
+    <div class="card-body">
+      <div class="card-title">${escHtml(a.title)}</div>
+      <div class="views-row">
+        <span class="views-count">${val}</span>
+        <span class="views-unit">${unit}再生</span>
+      </div>
+      ${achievedHtml}
+      ${milestoneHtml}
+      <div class="growth-row">${growthHtml}</div>
+    </div>`;
+  return card;
+}
+
+function renderMain() {
+  const videoIds = Object.keys(store.videos);
+  if (!videoIds.length) {
+    document.getElementById('mainContent').innerHTML =
+      '<div class="status-msg">データがありません。更新ボタンを押してください。</div>';
+    return;
+  }
+
+  const analyses = videoIds.map(analyzeVideo).filter(Boolean);
+
+  // ソート: 達成(48h) → もうすぐ(日数昇順) → その他(再生数降順)
+  analyses.sort((a, b) => {
+    if (a.hasAchievement !== b.hasAchievement) return a.hasAchievement ? -1 : 1;
+    if (a.isApproaching  !== b.isApproaching)  return a.isApproaching  ? -1 : 1;
+    if (a.isApproaching && b.isApproaching) {
+      return (a.estimatedDays ?? 999) - (b.estimatedDays ?? 999);
+    }
+    return b.currentViews - a.currentViews;
+  });
+
+  // Stats bar
+  document.getElementById('statApproaching').textContent = analyses.filter(a => a.isApproaching).length;
+  document.getElementById('statAchieved').textContent    = analyses.filter(a => a.hasAchievement).length;
+  document.getElementById('statTotal').textContent       = analyses.length;
+  document.getElementById('statsBar').style.display      = 'flex';
+
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+  analyses.forEach(a => grid.appendChild(buildCard(a)));
+
+  const content = document.getElementById('mainContent');
+  content.innerHTML = '';
+  content.appendChild(grid);
+
+  if (store.lastUpdated) {
+    document.getElementById('lastUpdated').textContent = fmtDatetime(store.lastUpdated);
+  }
+}
+
+// ─── 更新処理 ───────────────────────────────────────────
+let refreshTimer = null;
+
+function scheduleRefresh() {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(doRefresh, store.settings.refreshMinutes * 60 * 1000);
+}
+
+async function doRefresh() {
+  if (!store.settings.apiKey) { openSettings(); return; }
+
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  btn.textContent = '取得中...';
+
+  // 既存データがなければローディング表示
+  if (!Object.keys(store.videos).length) {
+    document.getElementById('mainContent').innerHTML =
+      '<div class="status-msg">動画データを取得中...</div>';
+  }
+
+  try {
+    await fetchAllVideos();
+    renderMain();
+  } catch(e) {
+    document.getElementById('mainContent').innerHTML =
+      `<div class="error-msg">✗ ${escHtml(e.message)}</div>`;
+    // エラーでも既存データがあれば表示
+    if (Object.keys(store.videos).length) renderMain();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '更新';
+    scheduleRefresh();
+  }
+}
+
+// ─── 設定 ───────────────────────────────────────────────
+function openSettings() {
+  document.getElementById('cfgApiKey').value   = store.settings.apiKey || '';
+  document.getElementById('cfgChannel').value  = store.settings.channelHandle || 'OtonoseKanade';
+  document.getElementById('cfgThreshold').value = store.settings.thresholdDays || 3;
+  document.getElementById('cfgInterval').value  = store.settings.refreshMinutes || 30;
+  document.getElementById('settingsModal').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('open');
+}
+
+function saveSettings() {
+  store.settings.apiKey         = document.getElementById('cfgApiKey').value.trim();
+  store.settings.channelHandle  = document.getElementById('cfgChannel').value.trim() || 'OtonoseKanade';
+  store.settings.thresholdDays  = parseInt(document.getElementById('cfgThreshold').value) || 3;
+  store.settings.refreshMinutes = parseInt(document.getElementById('cfgInterval').value) || 30;
+  saveStore();
+  closeSettings();
+  if (store.settings.apiKey) doRefresh();
+}
+
+function clearData() {
+  if (!confirm('履歴データをすべて削除しますか？\n（設定は保持されます）')) return;
+  store.videos = {};
+  store.lastUpdated = null;
+  saveStore();
+  closeSettings();
+  renderMain();
+}
+
+// ─── 初期化 ─────────────────────────────────────────────
+loadStore();
+
+if (!store.settings.apiKey) {
+  document.getElementById('mainContent').innerHTML = `
+    <div class="setup-screen">
+      <div class="setup-box">
+        <div class="setup-title">初期設定</div>
+        <div class="setup-desc">
+          YouTube Data API v3 のキーを入力してください。<br>
+          Google Cloud Console で取得できます（無料枠で十分です）。<br>
+          キーはこのブラウザの localStorage にのみ保存されます。
+        </div>
+        <div>
+          <div class="field-label">API Key</div>
+          <input class="field-input" type="password" id="setupApiKey" placeholder="AIza...">
+        </div>
+        <button class="btn primary" onclick="applySetup()"
+                style="width:100%;padding:10px;font-size:12px">
+          保存して開始
+        </button>
+      </div>
+    </div>`;
+} else {
+  // キャッシュデータがあれば即時表示し、バックグラウンドで更新
+  if (Object.keys(store.videos).length) renderMain();
+  doRefresh();
+}
+
+function applySetup() {
+  const key = document.getElementById('setupApiKey')?.value.trim();
+  if (!key) return;
+  store.settings.apiKey = key;
+  saveStore();
+  doRefresh();
+}
+</script>
+</body>
+</html>
