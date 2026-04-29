@@ -456,6 +456,29 @@ function parseDuration(iso) {
   return (parseInt(m[1] || 0) * 3600) + (parseInt(m[2] || 0) * 60) + parseInt(m[3] || 0);
 }
 
+// ライブ配信アーカイブか判定
+// プレミア公開は約5分のカウントダウン分だけ配信時間 > 動画尺になる
+// ライブ配信: streamDur ≈ videoDur → ratio < 1.5
+// プレミア公開: (videoDur + 5min) / videoDur → ratio > 1.5
+function detectLive(item, videoDur) {
+  if (!item.liveStreamingDetails) return false;
+  if (videoDur < 600) return false; // 10分未満はプレミアの短い動画
+  const { actualStartTime, actualEndTime } = item.liveStreamingDetails;
+  // タイムスタンプ欠損時は30分以上をライブとみなす
+  if (!actualStartTime || !actualEndTime) return videoDur >= 1800;
+  const streamDur = (new Date(actualEndTime) - new Date(actualStartTime)) / 1000;
+  if (streamDur <= 0) return videoDur >= 1800;
+  return (streamDur / videoDur) < 1.5;
+}
+
+// ショートか判定: 60秒以下 OR タイトル/タグに #shorts を含む
+function detectShort(item, dur) {
+  if (dur <= 60) return true;
+  const title = (item.snippet.title || '').toLowerCase();
+  const tags  = (item.snippet.tags  || []).map(t => t.toLowerCase());
+  return title.includes('#shorts') || tags.some(t => t === 'shorts' || t === 'short');
+}
+
 // ─── YouTube Data API ──────────────────────────────────
 async function apiGet(endpoint, params) {
   const url = new URL(`https://www.googleapis.com/youtube/v3/${endpoint}`);
@@ -515,11 +538,9 @@ async function fetchAllVideos() {
       if (item.statistics?.viewCount === undefined) continue;
 
       const dur = parseDuration(item.contentDetails?.duration || '');
-      if (dur <= 60) { skippedShort++; continue; }
-
-      // プレミア公開の曲動画もliveStreamingDetailsを持つため、
-      // 30分(1800秒)以上のものだけライブアーカイブと判定する
-      const isLive = !!item.liveStreamingDetails && dur > 1800;
+      const isLive = detectLive(item, dur);
+      // ライブ配信でなければショートチェック（ライブに#shortsタグが付く場合があるため順序重要）
+      if (!isLive && detectShort(item, dur)) { skippedShort++; continue; }
 
       const views = parseInt(item.statistics.viewCount || '0');
       const thumb = item.snippet.thumbnails.medium?.url
