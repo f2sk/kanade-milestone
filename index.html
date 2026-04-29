@@ -441,7 +441,9 @@ let store = {
     apiKey: '',
     channelHandle: 'OtonoseKanade',
     thresholdDays: 3,
-    refreshMinutes: 30
+    refreshMinutes: 30,
+    showMarkedOnly: false,
+    sortBy: 'views'
   },
   videos: {},
   lastUpdated: null,
@@ -460,7 +462,9 @@ function loadStore() {
       store = { ...store, ...parsed, settings: { ...store.settings, ...parsed.settings } };
     }
   } catch(e) {}
-  markedSet = new Set(store.markedIds || []);
+  markedSet      = new Set(store.markedIds || []);
+  showMarkedOnly = store.settings.showMarkedOnly || false;
+  sortBy         = store.settings.sortBy || 'views';
 }
 
 function saveStore() {
@@ -688,6 +692,8 @@ function toggleMark(id) {
 
 function setMarkFilter(markedOnly) {
   showMarkedOnly = markedOnly;
+  store.settings.showMarkedOnly = markedOnly;
+  saveStore();
   document.getElementById('fAll').classList.toggle('active',    !markedOnly);
   document.getElementById('fMarked').classList.toggle('active',  markedOnly);
   renderMain();
@@ -761,6 +767,8 @@ let sortBy = 'views'; // 'views' | 'date'
 
 function setSort(s) {
   sortBy = s;
+  store.settings.sortBy = s;
+  saveStore();
   document.getElementById('sViews').classList.toggle('active', s === 'views');
   document.getElementById('sDate').classList.toggle('active',  s === 'date');
   document.getElementById('sSoon').classList.toggle('active',  s === 'soon');
@@ -977,6 +985,12 @@ function clearData() {
 
 // ─── 初期化 ─────────────────────────────────────────────
 loadStore();
+// ツールバーのボタン状態を復元
+document.getElementById('fAll').classList.toggle('active',    !showMarkedOnly);
+document.getElementById('fMarked').classList.toggle('active',  showMarkedOnly);
+document.getElementById('sViews').classList.toggle('active', sortBy === 'views');
+document.getElementById('sDate').classList.toggle('active',  sortBy === 'date');
+document.getElementById('sSoon').classList.toggle('active',  sortBy === 'soon');
 updatePageTitle();
 updateNotifBtn();
 
