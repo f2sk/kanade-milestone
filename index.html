@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>再生マイルストーン — 音乃瀬奏</title>
+<title>再生回数マイルストーン</title>
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -84,6 +84,7 @@ body {
   border: 1px solid #1a2a3a;
   border-radius: 10px;
   overflow: hidden;
+  position: relative;
   transition: border-color .2s, box-shadow .2s;
   text-decoration: none;
   color: inherit;
@@ -104,21 +105,6 @@ body {
   50%       { box-shadow: 0 0 28px #ffd70060; }
 }
 
-/* ライブアーカイブ: 赤系アクセント */
-.card.live-card { background: #100d0d; border-color: #2a1515; }
-.card.live-card.approaching { border-color: #cc5500; box-shadow: 0 0 14px #ff660025; }
-.card.live-card.achieved    { border-color: #993300; }
-
-.card-type-badge {
-  display: inline-block;
-  font-size: 8px;
-  font-weight: bold;
-  letter-spacing: 1px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  margin-bottom: 5px;
-}
-.card-type-badge.live { background: #2a0a0a; color: #ff5555; border: 1px solid #ff333340; }
 
 /* ── Toolbar (フィルタ・ソート) ────────────────────── */
 .toolbar {
@@ -147,12 +133,26 @@ body {
 .tbtn:hover  { border-color: #3a7acc; color: #6aaeff; }
 .tbtn.active { background: #0d2040; border-color: #3a7acc; color: #4a9eff; }
 
+.thumb-wrap { position: relative; }
 .card-thumb {
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
   display: block;
   background: #0a1520;
+}
+.thumb-duration {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: rgba(0,0,0,.85);
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .3px;
 }
 .card-body { padding: 8px 10px 10px; }
 
@@ -293,15 +293,61 @@ body {
 @media (max-width: 360px) {
   .grid { grid-template-columns: 1fr; }
 }
+
+/* ── マークボタン ─────────────────────────────────────── */
+.mark-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(0,0,0,.75);
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #555;
+  font-size: 14px;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+  z-index: 2;
+  padding: 0;
+}
+.mark-btn:hover       { border-color: #ffd700; color: #ffd700; }
+.mark-btn.marked      { color: #ffd700; border-color: #ffd70080; }
+.card.marked-card     { border-color: #4a3a00; }
+
+/* ── カード下部アクション行 ─────────────────────────────── */
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+.tweet-btn {
+  background: transparent;
+  border: 1px solid #1a3a5a;
+  border-radius: 4px;
+  color: #4a7aaa;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 7px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.tweet-btn:hover { border-color: #4a9eff; color: #4a9eff; }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <div class="header-title">🎵 再生マイルストーン — 音乃瀬奏</div>
+  <div class="header-title" id="headerTitle">🎵 再生回数マイルストーン</div>
   <div class="header-right">
     <span class="last-updated" id="lastUpdated">未取得</span>
     <button class="btn primary" id="refreshBtn" onclick="doRefresh()">更新</button>
+    <button class="btn" id="notifBtn" onclick="requestNotif()" title="ブラウザ通知">🔔</button>
     <button class="btn" onclick="openSettings()">⚙</button>
   </div>
 </div>
@@ -324,9 +370,8 @@ body {
 
 <div class="toolbar" id="toolbar" style="display:none">
   <div class="toolbar-group">
-    <button class="tbtn active" id="fAll"   onclick="setFilter('all')">全て</button>
-    <button class="tbtn"        id="fVideo" onclick="setFilter('video')">動画</button>
-    <button class="tbtn"        id="fLive"  onclick="setFilter('live')">ライブ</button>
+    <button class="tbtn active" id="fAll"    onclick="setMarkFilter(false)">全て</button>
+    <button class="tbtn"        id="fMarked" onclick="setMarkFilter(true)">★のみ</button>
   </div>
   <span class="toolbar-sep">|</span>
   <div class="toolbar-group">
@@ -397,8 +442,13 @@ let store = {
     refreshMinutes: 30
   },
   videos: {},
-  lastUpdated: null
+  lastUpdated: null,
+  markedIds: [],   // 手動マーク済み動画ID
+  notified: {}     // 通知済みマイルストーン { "videoId:milestone": timestamp }
 };
+
+let markedSet      = new Set();
+let showMarkedOnly = false;
 
 function loadStore() {
   try {
@@ -408,6 +458,7 @@ function loadStore() {
       store = { ...store, ...parsed, settings: { ...store.settings, ...parsed.settings } };
     }
   } catch(e) {}
+  markedSet = new Set(store.markedIds || []);
 }
 
 function saveStore() {
@@ -445,6 +496,16 @@ function fmtDatetime(ts) {
        + `${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
+// 秒数 → "H:MM:SS" / "M:SS"
+function fmtDuration(secs) {
+  if (!secs) return '';
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
 function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -456,28 +517,6 @@ function parseDuration(iso) {
   return (parseInt(m[1] || 0) * 3600) + (parseInt(m[2] || 0) * 60) + parseInt(m[3] || 0);
 }
 
-// ライブ配信アーカイブか判定
-// プレミア公開は約5分のカウントダウン分だけ配信時間 > 動画尺になる
-// ライブ配信: streamDur ≈ videoDur → ratio < 1.5
-// プレミア公開: (videoDur + 5min) / videoDur → ratio > 1.5
-function detectLive(item, videoDur) {
-  if (!item.liveStreamingDetails) return false;
-  if (videoDur < 600) return false; // 10分未満はプレミアの短い動画
-  const { actualStartTime, actualEndTime } = item.liveStreamingDetails;
-  // タイムスタンプ欠損時は30分以上をライブとみなす
-  if (!actualStartTime || !actualEndTime) return videoDur >= 1800;
-  const streamDur = (new Date(actualEndTime) - new Date(actualStartTime)) / 1000;
-  if (streamDur <= 0) return videoDur >= 1800;
-  return (streamDur / videoDur) < 1.5;
-}
-
-// ショートか判定: 60秒以下 OR タイトル/タグに #shorts を含む
-function detectShort(item, dur) {
-  if (dur <= 60) return true;
-  const title = (item.snippet.title || '').toLowerCase();
-  const tags  = (item.snippet.tags  || []).map(t => t.toLowerCase());
-  return title.includes('#shorts') || tags.some(t => t === 'shorts' || t === 'short');
-}
 
 // ─── YouTube Data API ──────────────────────────────────
 async function apiGet(endpoint, params) {
@@ -494,7 +533,7 @@ async function apiGet(endpoint, params) {
 }
 
 async function fetchAllVideos() {
-  // チャンネルのuploadsプレイリストIDを取得
+  // チャンネルの uploads プレイリスト ID を取得
   const chRes = await apiGet('channels', {
     part: 'contentDetails',
     forHandle: store.settings.channelHandle
@@ -521,55 +560,48 @@ async function fetchAllVideos() {
   // 動画の統計・情報を50本ずつバッチ取得
   const now = Date.now();
   const cutoff7d = now - 7 * 24 * 3600 * 1000;
-  let storedCount = 0, skippedLive = 0, skippedShort = 0, skippedUpcoming = 0;
+  let storedCount = 0, skippedUpcoming = 0;
 
   for (let i = 0; i < videoIds.length; i += 50) {
     const batch = videoIds.slice(i, i + 50);
     const vRes = await apiGet('videos', {
-      part: 'statistics,snippet,contentDetails,liveStreamingDetails',
+      part: 'statistics,snippet,contentDetails',
       id: batch.join(',')
     });
     for (const item of (vRes.items || [])) {
-      // 公開前・配信中は除外、ショート(60秒以下)も除外
+      // 配信中・公開前は除外（再生数が確定していないため）
       const lbc = item.snippet.liveBroadcastContent;
-      if (lbc === 'live')     { skippedLive++;     continue; }
-      if (lbc === 'upcoming') { skippedUpcoming++; continue; }
+      if (lbc === 'live' || lbc === 'upcoming') { skippedUpcoming++; continue; }
       // 再生数が取れない動画（メンバー限定等）は除外
       if (item.statistics?.viewCount === undefined) continue;
 
-      const dur = parseDuration(item.contentDetails?.duration || '');
-      const isLive = detectLive(item, dur);
-      // ライブ配信でなければショートチェック（ライブに#shortsタグが付く場合があるため順序重要）
-      if (!isLive && detectShort(item, dur)) { skippedShort++; continue; }
-
-      const views = parseInt(item.statistics.viewCount || '0');
-      const thumb = item.snippet.thumbnails.medium?.url
-                 || item.snippet.thumbnails.default?.url || '';
+      const dur    = parseDuration(item.contentDetails?.duration || '');
+      const views  = parseInt(item.statistics.viewCount || '0');
+      const thumb  = item.snippet.thumbnails.medium?.url
+                  || item.snippet.thumbnails.default?.url || '';
 
       if (!store.videos[item.id]) {
         store.videos[item.id] = {
           title: item.snippet.title,
           thumbnail: thumb,
           publishedAt: item.snippet.publishedAt,
-          isLive: isLive,
+          duration: dur,
           history: []
         };
       }
       store.videos[item.id].title     = item.snippet.title;
       store.videos[item.id].thumbnail = thumb;
-      store.videos[item.id].isLive    = isLive;
+      store.videos[item.id].duration  = dur;
 
       const hist = store.videos[item.id].history;
-      // 直前と同じ再生数なら追記しない（タイムスタンプのみ更新）
       if (!hist.length || hist[hist.length - 1].views !== views) {
         hist.push({ ts: now, views });
       }
-      // 7日より古い履歴を削除
       store.videos[item.id].history = hist.filter(h => h.ts >= cutoff7d);
       storedCount++;
     }
   }
-  console.log(`[fetch] 保存: ${storedCount}件 / スキップ: live=${skippedLive} upcoming=${skippedUpcoming} short=${skippedShort}`);
+  console.log(`[fetch] 保存: ${storedCount}件 / スキップ(配信中/未公開): ${skippedUpcoming}件`);
 
   store.lastUpdated = now;
   saveStore();
@@ -624,7 +656,7 @@ function analyzeVideo(videoId) {
     title:         video.title,
     thumbnail:     video.thumbnail,
     publishedAt:   video.publishedAt,
-    isLive:        video.isLive || false,
+    duration:      video.duration || 0,
     currentViews,
     nextMilestone,
     growthPerDay,
@@ -635,17 +667,89 @@ function analyzeVideo(videoId) {
   };
 }
 
-// ─── フィルタ・ソート状態 ──────────────────────────────
-let filterType = 'all';  // 'all' | 'video' | 'live'
-let sortBy     = 'views'; // 'views' | 'date'
-
-function setFilter(type) {
-  filterType = type;
-  ['All','Video','Live'].forEach(t => {
-    document.getElementById('f' + t).classList.toggle('active', type === t.toLowerCase());
-  });
+// ─── 手動マーク ────────────────────────────────────────
+function toggleMark(id) {
+  if (markedSet.has(id)) {
+    markedSet.delete(id);
+  } else {
+    markedSet.add(id);
+  }
+  store.markedIds = [...markedSet];
+  saveStore();
   renderMain();
 }
+
+function setMarkFilter(markedOnly) {
+  showMarkedOnly = markedOnly;
+  document.getElementById('fAll').classList.toggle('active',    !markedOnly);
+  document.getElementById('fMarked').classList.toggle('active',  markedOnly);
+  renderMain();
+}
+
+// ─── ツイート URL 生成 ──────────────────────────────────
+function buildTweetUrl(a) {
+  const ytUrl = `https://youtu.be/${a.id}`;
+  let text;
+  if (a.hasAchievement) {
+    text = `${a.title} ${ytUrl} 【${fmtMilestone(a.recentlyAchieved)}再生達成🎉】`;
+  } else if (a.isApproaching && a.nextMilestone) {
+    text = `${a.title} ${ytUrl} まもなく${fmtMilestone(a.nextMilestone)}再生！（あと${fmtViews(a.nextMilestone - a.currentViews)}）`;
+  } else {
+    text = `${a.title} ${ytUrl} ${fmtViews(a.currentViews)}再生`;
+  }
+  return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+}
+
+// ─── ブラウザ通知 ────────────────────────────────────────
+function updatePageTitle() {
+  const ch = store.settings.channelHandle || '';
+  const title = ch ? `再生回数マイルストーン ー ${ch}` : '再生回数マイルストーン';
+  document.title = title;
+  document.getElementById('headerTitle').textContent = `🎵 ${title}`;
+}
+
+function updateNotifBtn() {
+  const btn = document.getElementById('notifBtn');
+  if (!btn || !('Notification' in window)) { if (btn) btn.style.display = 'none'; return; }
+  if (Notification.permission === 'granted')  { btn.textContent = '🔔'; btn.title = '通知ON'; }
+  else if (Notification.permission === 'denied') { btn.textContent = '🔕'; btn.title = '通知がブロックされています（ブラウザ設定から変更してください）'; }
+  else { btn.textContent = '🔔'; btn.title = '通知を有効にする'; }
+}
+
+async function requestNotif() {
+  if (!('Notification' in window)) { alert('このブラウザは通知に対応していません'); return; }
+  if (Notification.permission === 'granted') { alert('通知はすでに有効です'); return; }
+  if (Notification.permission === 'denied')  { alert('通知がブロックされています。ブラウザのサイト設定から許可してください'); return; }
+  await Notification.requestPermission();
+  updateNotifBtn();
+}
+
+function checkAndNotify(analyses) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const now = Date.now();
+  // 7日より古い通知済み記録を削除
+  Object.keys(store.notified).forEach(k => {
+    if (now - store.notified[k] > 7 * 24 * 3600 * 1000) delete store.notified[k];
+  });
+  let updated = false;
+  for (const a of analyses) {
+    if (!a.recentlyAchieved) continue;
+    const key = `${a.id}:${a.recentlyAchieved}`;
+    if (store.notified[key]) continue;
+    store.notified[key] = now;
+    updated = true;
+    try {
+      new Notification('🎉 マイルストーン達成！', {
+        body: `${a.title}\n${fmtMilestone(a.recentlyAchieved)}再生 達成`,
+        icon: a.thumbnail || undefined
+      });
+    } catch(e) {}
+  }
+  if (updated) saveStore();
+}
+
+// ─── ソート状態 ────────────────────────────────────────
+let sortBy = 'views'; // 'views' | 'date'
 
 function setSort(s) {
   sortBy = s;
@@ -698,19 +802,24 @@ function buildCard(a) {
     ? `+${fmtViews(Math.round(a.growthPerDay))}/日`
     : 'データ蓄積中...';
 
-  const liveCls = a.isLive ? 'live-card' : '';
-  const typeBadge = a.isLive
-    ? `<div class="card-type-badge live">LIVE ARCHIVE</div>` : '';
+  const isMarked  = markedSet.has(a.id);
+  const durStr    = fmtDuration(a.duration);
+  const tweetUrl  = buildTweetUrl(a);
 
-  const card = document.createElement('a');
-  card.className = `card ${liveCls} ${cardCls}`;
-  card.href = `https://www.youtube.com/watch?v=${a.id}`;
-  card.target = '_blank';
-  card.rel = 'noopener noreferrer';
+  const card = document.createElement('div');
+  card.className = `card ${cardCls}${isMarked ? ' marked-card' : ''}`;
+  card.addEventListener('click', (e) => {
+    if (!e.target.closest('.card-btn'))
+      window.open(`https://www.youtube.com/watch?v=${a.id}`, '_blank', 'noopener,noreferrer');
+  });
   card.innerHTML = `
-    <img class="card-thumb" src="${escHtml(a.thumbnail)}" loading="lazy" alt="">
+    <div class="thumb-wrap">
+      <img class="card-thumb" src="${escHtml(a.thumbnail)}" loading="lazy" alt="">
+      ${durStr ? `<span class="thumb-duration">${escHtml(durStr)}</span>` : ''}
+    </div>
+    <button class="mark-btn card-btn${isMarked ? ' marked' : ''}"
+            onclick="toggleMark('${a.id}')" title="${isMarked ? 'マーク解除' : 'マーク'}">★</button>
     <div class="card-body">
-      ${typeBadge}
       <div class="card-title">${escHtml(a.title)}</div>
       <div class="views-row">
         <span class="views-count">${val}</span>
@@ -718,7 +827,11 @@ function buildCard(a) {
       </div>
       ${achievedHtml}
       ${milestoneHtml}
-      <div class="growth-row">${growthHtml}</div>
+      <div class="card-footer">
+        <div class="growth-row">${growthHtml}</div>
+        <a class="tweet-btn card-btn" href="${escHtml(tweetUrl)}"
+           target="_blank" rel="noopener" onclick="event.stopPropagation()">🐦 ツイート</a>
+      </div>
     </div>`;
   return card;
 }
@@ -733,9 +846,8 @@ function renderMain() {
 
   let analyses = videoIds.map(analyzeVideo).filter(Boolean);
 
-  // フィルタ
-  if (filterType === 'video') analyses = analyses.filter(a => !a.isLive);
-  if (filterType === 'live')  analyses = analyses.filter(a =>  a.isLive);
+  // マークフィルタ
+  if (showMarkedOnly) analyses = analyses.filter(a => markedSet.has(a.id));
 
   // ソート
   if (sortBy === 'date') {
@@ -796,6 +908,9 @@ async function doRefresh() {
   try {
     await fetchAllVideos();
     renderMain();
+    // 通知チェック（更新完了後に達成マイルストーンを確認）
+    const allAnalyses = Object.keys(store.videos).map(analyzeVideo).filter(Boolean);
+    checkAndNotify(allAnalyses);
   } catch(e) {
     document.getElementById('mainContent').innerHTML =
       `<div class="error-msg">✗ ${escHtml(e.message)}</div>`;
@@ -827,6 +942,7 @@ function saveSettings() {
   store.settings.thresholdDays  = parseInt(document.getElementById('cfgThreshold').value) || 3;
   store.settings.refreshMinutes = parseInt(document.getElementById('cfgInterval').value) || 30;
   saveStore();
+  updatePageTitle();
   closeSettings();
   if (store.settings.apiKey) doRefresh();
 }
@@ -835,6 +951,9 @@ function clearData() {
   if (!confirm('履歴データをすべて削除しますか？\n（設定は保持されます）')) return;
   store.videos = {};
   store.lastUpdated = null;
+  store.markedIds = [];
+  store.notified  = {};
+  markedSet = new Set();
   saveStore();
   closeSettings();
   renderMain();
@@ -842,6 +961,8 @@ function clearData() {
 
 // ─── 初期化 ─────────────────────────────────────────────
 loadStore();
+updatePageTitle();
+updateNotifBtn();
 
 if (!store.settings.apiKey) {
   document.getElementById('mainContent').innerHTML = `
