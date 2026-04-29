@@ -736,6 +736,7 @@ function checkAndNotify(analyses) {
   let updated = false;
   for (const a of analyses) {
     if (!a.recentlyAchieved) continue;
+    if (!markedSet.has(a.id)) continue;
     const key = `${a.id}:${a.recentlyAchieved}`;
     if (store.notified[key]) continue;
     store.notified[key] = now;
