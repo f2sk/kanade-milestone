@@ -377,6 +377,7 @@ body {
   <div class="toolbar-group">
     <button class="tbtn active" id="sViews" onclick="setSort('views')">再生数</button>
     <button class="tbtn"        id="sDate"  onclick="setSort('date')">投稿日</button>
+    <button class="tbtn"        id="sSoon"  onclick="setSort('soon')">もうすぐ</button>
   </div>
 </div>
 
@@ -756,6 +757,7 @@ function setSort(s) {
   sortBy = s;
   document.getElementById('sViews').classList.toggle('active', s === 'views');
   document.getElementById('sDate').classList.toggle('active',  s === 'date');
+  document.getElementById('sSoon').classList.toggle('active',  s === 'soon');
   renderMain();
 }
 
@@ -853,6 +855,13 @@ function renderMain() {
   // ソート
   if (sortBy === 'date') {
     analyses.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+  } else if (sortBy === 'soon') {
+    // もうすぐ順: ETA昇順（ETAなしは末尾）
+    analyses.sort((a, b) => {
+      const da = a.estimatedDays ?? Infinity;
+      const db = b.estimatedDays ?? Infinity;
+      return da - db;
+    });
   } else {
     // 再生数モード: 達成(48h) → もうすぐ(日数昇順) → その他(再生数降順)
     analyses.sort((a, b) => {
