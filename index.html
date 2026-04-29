@@ -104,6 +104,49 @@ body {
   50%       { box-shadow: 0 0 28px #ffd70060; }
 }
 
+/* ライブアーカイブ: 赤系アクセント */
+.card.live-card { background: #100d0d; border-color: #2a1515; }
+.card.live-card.approaching { border-color: #cc5500; box-shadow: 0 0 14px #ff660025; }
+.card.live-card.achieved    { border-color: #993300; }
+
+.card-type-badge {
+  display: inline-block;
+  font-size: 8px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-bottom: 5px;
+}
+.card-type-badge.live { background: #2a0a0a; color: #ff5555; border: 1px solid #ff333340; }
+
+/* ── Toolbar (フィルタ・ソート) ────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: #090e18;
+  border-bottom: 1px solid #0f1e2e;
+  flex-wrap: wrap;
+}
+.toolbar-group { display: flex; gap: 4px; }
+.toolbar-sep { color: #1a3a5a; margin: 0 2px; }
+.tbtn {
+  background: #0a1520;
+  border: 1px solid #1a3a5a;
+  border-radius: 4px;
+  color: #3a6a8a;
+  font-family: inherit;
+  font-size: 10px;
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.tbtn:hover  { border-color: #3a7acc; color: #6aaeff; }
+.tbtn.active { background: #0d2040; border-color: #3a7acc; color: #4a9eff; }
+
 .card-thumb {
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -279,6 +322,19 @@ body {
   </div>
 </div>
 
+<div class="toolbar" id="toolbar" style="display:none">
+  <div class="toolbar-group">
+    <button class="tbtn active" id="fAll"   onclick="setFilter('all')">全て</button>
+    <button class="tbtn"        id="fVideo" onclick="setFilter('video')">動画</button>
+    <button class="tbtn"        id="fLive"  onclick="setFilter('live')">ライブ</button>
+  </div>
+  <span class="toolbar-sep">|</span>
+  <div class="toolbar-group">
+    <button class="tbtn active" id="sViews" onclick="setSort('views')">再生数</button>
+    <button class="tbtn"        id="sDate"  onclick="setSort('date')">投稿日</button>
+  </div>
+</div>
+
 <div id="mainContent">
   <div class="status-msg">読み込み中...</div>
 </div>
@@ -443,14 +499,16 @@ async function fetchAllVideos() {
   for (let i = 0; i < videoIds.length; i += 50) {
     const batch = videoIds.slice(i, i + 50);
     const vRes = await apiGet('videos', {
-      part: 'statistics,snippet,contentDetails',
+      part: 'statistics,snippet,contentDetails,liveStreamingDetails',
       id: batch.join(',')
     });
     for (const item of vRes.items) {
-      // ライブ・プレミア・ショート(60秒以下)を除外
-      const lbc = item.snippet.liveBroadcastContent; // 'live' | 'upcoming' | 'none'
+      // 公開前・配信中は除外、ショート(60秒以下)も除外
+      const lbc = item.snippet.liveBroadcastContent;
       if (lbc === 'live' || lbc === 'upcoming') continue;
       if (parseDuration(item.contentDetails.duration) <= 60) continue;
+      // liveStreamingDetailsがあればライブアーカイブ
+      const isLive = !!item.liveStreamingDetails;
 
       const views = parseInt(item.statistics.viewCount || '0');
       const thumb = item.snippet.thumbnails.medium?.url
@@ -461,11 +519,13 @@ async function fetchAllVideos() {
           title: item.snippet.title,
           thumbnail: thumb,
           publishedAt: item.snippet.publishedAt,
+          isLive: isLive,
           history: []
         };
       }
       store.videos[item.id].title     = item.snippet.title;
       store.videos[item.id].thumbnail = thumb;
+      store.videos[item.id].isLive    = isLive;
 
       const hist = store.videos[item.id].history;
       // 直前と同じ再生数なら追記しない（タイムスタンプのみ更新）
@@ -530,6 +590,7 @@ function analyzeVideo(videoId) {
     title:         video.title,
     thumbnail:     video.thumbnail,
     publishedAt:   video.publishedAt,
+    isLive:        video.isLive || false,
     currentViews,
     nextMilestone,
     growthPerDay,
@@ -538,6 +599,25 @@ function analyzeVideo(videoId) {
     isApproaching:  estimatedDays !== null && estimatedDays <= store.settings.thresholdDays,
     hasAchievement: recentlyAchieved !== null
   };
+}
+
+// ─── フィルタ・ソート状態 ──────────────────────────────
+let filterType = 'all';  // 'all' | 'video' | 'live'
+let sortBy     = 'views'; // 'views' | 'date'
+
+function setFilter(type) {
+  filterType = type;
+  ['All','Video','Live'].forEach(t => {
+    document.getElementById('f' + t).classList.toggle('active', type === t.toLowerCase());
+  });
+  renderMain();
+}
+
+function setSort(s) {
+  sortBy = s;
+  document.getElementById('sViews').classList.toggle('active', s === 'views');
+  document.getElementById('sDate').classList.toggle('active',  s === 'date');
+  renderMain();
 }
 
 // ─── レンダリング ───────────────────────────────────────
@@ -584,14 +664,19 @@ function buildCard(a) {
     ? `+${fmtViews(Math.round(a.growthPerDay))}/日`
     : 'データ蓄積中...';
 
+  const liveCls = a.isLive ? 'live-card' : '';
+  const typeBadge = a.isLive
+    ? `<div class="card-type-badge live">LIVE ARCHIVE</div>` : '';
+
   const card = document.createElement('a');
-  card.className = `card ${cardCls}`;
+  card.className = `card ${liveCls} ${cardCls}`;
   card.href = `https://www.youtube.com/watch?v=${a.id}`;
   card.target = '_blank';
   card.rel = 'noopener noreferrer';
   card.innerHTML = `
     <img class="card-thumb" src="${escHtml(a.thumbnail)}" loading="lazy" alt="">
     <div class="card-body">
+      ${typeBadge}
       <div class="card-title">${escHtml(a.title)}</div>
       <div class="views-row">
         <span class="views-count">${val}</span>
@@ -612,19 +697,29 @@ function renderMain() {
     return;
   }
 
-  const analyses = videoIds.map(analyzeVideo).filter(Boolean);
+  let analyses = videoIds.map(analyzeVideo).filter(Boolean);
 
-  // ソート: 達成(48h) → もうすぐ(日数昇順) → その他(再生数降順)
-  analyses.sort((a, b) => {
-    if (a.hasAchievement !== b.hasAchievement) return a.hasAchievement ? -1 : 1;
-    if (a.isApproaching  !== b.isApproaching)  return a.isApproaching  ? -1 : 1;
-    if (a.isApproaching && b.isApproaching) {
-      return (a.estimatedDays ?? 999) - (b.estimatedDays ?? 999);
-    }
-    return b.currentViews - a.currentViews;
-  });
+  // フィルタ
+  if (filterType === 'video') analyses = analyses.filter(a => !a.isLive);
+  if (filterType === 'live')  analyses = analyses.filter(a =>  a.isLive);
 
-  // Stats bar
+  // ソート
+  if (sortBy === 'date') {
+    analyses.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+  } else {
+    // 再生数モード: 達成(48h) → もうすぐ(日数昇順) → その他(再生数降順)
+    analyses.sort((a, b) => {
+      if (a.hasAchievement !== b.hasAchievement) return a.hasAchievement ? -1 : 1;
+      if (a.isApproaching  !== b.isApproaching)  return a.isApproaching  ? -1 : 1;
+      if (a.isApproaching && b.isApproaching) {
+        return (a.estimatedDays ?? 999) - (b.estimatedDays ?? 999);
+      }
+      return b.currentViews - a.currentViews;
+    });
+  }
+
+  // Stats bar・ツールバー表示
+  document.getElementById('toolbar').style.display = 'flex';
   document.getElementById('statApproaching').textContent = analyses.filter(a => a.isApproaching).length;
   document.getElementById('statAchieved').textContent    = analyses.filter(a => a.hasAchievement).length;
   document.getElementById('statTotal').textContent       = analyses.length;
