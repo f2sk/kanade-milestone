@@ -85,6 +85,10 @@ body {
   border-radius: 10px;
   overflow: hidden;
   transition: border-color .2s, box-shadow .2s;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  cursor: pointer;
 }
 .card.approaching {
   border-color: #cc8800;
@@ -389,6 +393,13 @@ function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ISO 8601 duration → 秒数 (例: "PT1M30S" → 90)
+function parseDuration(iso) {
+  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return 0;
+  return (parseInt(m[1] || 0) * 3600) + (parseInt(m[2] || 0) * 60) + parseInt(m[3] || 0);
+}
+
 // ─── YouTube Data API ──────────────────────────────────
 async function apiGet(endpoint, params) {
   const url = new URL(`https://www.googleapis.com/youtube/v3/${endpoint}`);
@@ -432,10 +443,15 @@ async function fetchAllVideos() {
   for (let i = 0; i < videoIds.length; i += 50) {
     const batch = videoIds.slice(i, i + 50);
     const vRes = await apiGet('videos', {
-      part: 'statistics,snippet',
+      part: 'statistics,snippet,contentDetails',
       id: batch.join(',')
     });
     for (const item of vRes.items) {
+      // ライブ・プレミア・ショート(60秒以下)を除外
+      const lbc = item.snippet.liveBroadcastContent; // 'live' | 'upcoming' | 'none'
+      if (lbc === 'live' || lbc === 'upcoming') continue;
+      if (parseDuration(item.contentDetails.duration) <= 60) continue;
+
       const views = parseInt(item.statistics.viewCount || '0');
       const thumb = item.snippet.thumbnails.medium?.url
                  || item.snippet.thumbnails.default?.url || '';
@@ -568,8 +584,11 @@ function buildCard(a) {
     ? `+${fmtViews(Math.round(a.growthPerDay))}/日`
     : 'データ蓄積中...';
 
-  const card = document.createElement('div');
+  const card = document.createElement('a');
   card.className = `card ${cardCls}`;
+  card.href = `https://www.youtube.com/watch?v=${a.id}`;
+  card.target = '_blank';
+  card.rel = 'noopener noreferrer';
   card.innerHTML = `
     <img class="card-thumb" src="${escHtml(a.thumbnail)}" loading="lazy" alt="">
     <div class="card-body">
