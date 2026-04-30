@@ -323,6 +323,11 @@ body {
 
 /* ── Responsive ─────────────────────────────────────── */
 @media (max-width: 640px) {
+  body { overflow-x: hidden; }
+  .header { padding: 7px 10px; gap: 6px; }
+  .header-title { font-size: 11px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .last-updated { display: none; }
+  .header-right { gap: 5px; }
   .grid { grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 6px; }
   .card-body { padding: 5px 6px 6px; }
   .card-title { font-size: 9px; min-height: 24px; margin-bottom: 4px; }
