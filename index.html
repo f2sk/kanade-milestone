@@ -92,18 +92,13 @@ body {
   cursor: pointer;
 }
 .card.approaching {
-  border-color: #cc8800;
-  box-shadow: 0 0 14px #ffaa0025;
+  border: 2px solid #cc8800;
+  box-shadow: 0 0 18px #ffaa0045;
 }
 .card.achieved {
   border: 2px solid #ffd700;
   background: linear-gradient(160deg, #1e1600 0%, #0e1826 55%);
   box-shadow: 0 0 28px #ffd70070, inset 0 0 24px #ffd70012;
-  animation: pulse-gold 2s ease-in-out infinite;
-}
-@keyframes pulse-gold {
-  0%, 100% { box-shadow: 0 0 28px #ffd70070, inset 0 0 24px #ffd70012; }
-  50%       { box-shadow: 0 0 50px #ffd700b0, inset 0 0 36px #ffd70022; }
 }
 .card.achieved-3d {
   border-color: #cc9900;
