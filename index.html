@@ -96,15 +96,32 @@ body {
   box-shadow: 0 0 14px #ffaa0025;
 }
 .card.achieved {
-  border-color: #aa8800;
-  box-shadow: 0 0 18px #ffd70030;
+  border: 2px solid #ffd700;
+  background: linear-gradient(160deg, #1e1600 0%, #0e1826 55%);
+  box-shadow: 0 0 28px #ffd70070, inset 0 0 24px #ffd70012;
   animation: pulse-gold 2s ease-in-out infinite;
 }
 @keyframes pulse-gold {
-  0%, 100% { box-shadow: 0 0 18px #ffd70030; }
-  50%       { box-shadow: 0 0 28px #ffd70060; }
+  0%, 100% { box-shadow: 0 0 28px #ffd70070, inset 0 0 24px #ffd70012; }
+  50%       { box-shadow: 0 0 50px #ffd700b0, inset 0 0 36px #ffd70022; }
+}
+.card.achieved-3d {
+  border-color: #cc9900;
+  box-shadow: 0 0 16px #ffd70045;
 }
 
+
+/* ── セクションヘッダー ──────────────────────────── */
+.section-header {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #3a6a8a;
+  padding: 8px 4px 4px;
+  border-bottom: 1px solid #1a3050;
+  margin-bottom: 2px;
+}
+.section-header:first-child { padding-top: 0; }
 
 /* ── Toolbar (フィルタ・ソート) ────────────────────── */
 .toolbar {
@@ -171,6 +188,7 @@ body {
 .views-row { display: flex; align-items: baseline; gap: 5px; margin-bottom: 7px; }
 .views-count { font-size: 22px; font-weight: bold; color: #e8f0ff; font-variant-numeric: tabular-nums; }
 .views-unit  { font-size: 11px; color: #3a6a8a; }
+.growth-inline { font-size: 10px; color: #4a7a9a; margin-left: auto; white-space: nowrap; }
 
 /* ── Achievement badge ─────────────────────────────── */
 .achieved-badge {
@@ -207,7 +225,8 @@ body {
 .progress-bar.approaching { background: linear-gradient(90deg, #886600, #ffaa00); }
 .progress-bar.normal      { background: linear-gradient(90deg, #1a4a8a, #4a9eff); }
 
-.growth-row { font-size: 9px; color: #2a5a7a; margin-top: 4px; text-align: right; }
+.growth-row   { display: none; }
+.publish-row  { font-size: 9px; color: #2a4a6a; margin-top: 5px; }
 
 /* ── Status messages ───────────────────────────────── */
 .status-msg { text-align: center; padding: 60px 20px; font-size: 13px; color: #3a6a8a; }
@@ -377,7 +396,7 @@ body {
   <div class="toolbar-group">
     <button class="tbtn active" id="sViews" onclick="setSort('views')">再生数</button>
     <button class="tbtn"        id="sDate"  onclick="setSort('date')">投稿日</button>
-    <button class="tbtn"        id="sSoon"  onclick="setSort('soon')">もうすぐ</button>
+    <button class="tbtn"        id="sSoon"  onclick="setSort('soon')">注目</button>
   </div>
 </div>
 
@@ -493,6 +512,15 @@ function fmtDays(days) {
   if (days < 0.5) return '今日中！';
   if (days < 1.5) return '明日';
   return `約${Math.ceil(days)}日後`;
+}
+
+// estimatedDays から予想到達日時を「今日 HH:MM」「明日 HH:MM」「M/D HH:MM」形式で返す
+function fmtEta(days) {
+  const d = new Date(Date.now() + days * 24 * 3600 * 1000);
+  const hhmm = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  if (days < 1) return `今日 ${hhmm}`;
+  if (days < 2) return `明日 ${hhmm}`;
+  return `${d.getMonth()+1}/${d.getDate()} ${hhmm}`;
 }
 
 function fmtDatetime(ts) {
@@ -635,9 +663,9 @@ function calcGrowthPerDay(history) {
   return num / den; // [views/day]
 }
 
-function getRecentlyAchieved(history) {
+function getRecentlyAchieved(history, hours = 48) {
   if (history.length < 2) return null;
-  const cutoff48h = Date.now() - 48 * 3600 * 1000;
+  const cutoff48h = Date.now() - hours * 3600 * 1000;
   const recent = history.filter(h => h.ts >= cutoff48h);
   if (recent.length === 0) return null;
 
@@ -655,7 +683,8 @@ function analyzeVideo(videoId) {
   const currentViews  = video.history[video.history.length - 1].views;
   const nextMilestone = getNextMilestone(currentViews);
   const growthPerDay  = calcGrowthPerDay(video.history);
-  const recentlyAchieved = getRecentlyAchieved(video.history);
+  const recentlyAchieved     = getRecentlyAchieved(video.history, 48);
+  const recentlyAchieved72h  = getRecentlyAchieved(video.history, 72);
 
   let estimatedDays = null;
   if (nextMilestone && growthPerDay > 0) {
@@ -673,8 +702,9 @@ function analyzeVideo(videoId) {
     growthPerDay,
     estimatedDays,
     recentlyAchieved,
-    isApproaching:  estimatedDays !== null && estimatedDays <= store.settings.thresholdDays,
-    hasAchievement: recentlyAchieved !== null
+    isApproaching:       estimatedDays !== null && estimatedDays <= store.settings.thresholdDays,
+    hasAchievement:      recentlyAchieved !== null,
+    achievedWithin3Days: recentlyAchieved72h !== null
   };
 }
 
@@ -777,7 +807,9 @@ function setSort(s) {
 
 // ─── レンダリング ───────────────────────────────────────
 function buildCard(a) {
-  const cardCls = a.hasAchievement ? 'achieved' : a.isApproaching ? 'approaching' : '';
+  const cardCls = a.hasAchievement      ? 'achieved'
+               : a.achievedWithin3Days ? 'achieved-3d'
+               : a.isApproaching       ? 'approaching' : '';
   const { val, unit } = fmtViewsUnit(a.currentViews);
 
   // 進捗バー（前マイルストーン〜次マイルストーン間）
@@ -786,14 +818,20 @@ function buildCard(a) {
     ? (a.currentViews - prevMs) / (a.nextMilestone - prevMs)
     : 1;
 
-  // ETA表示
+  // ETA表示: もうすぐ判定の場合のみ時刻精度、それ以外は日数表示
   let etaHtml;
   if (a.estimatedDays !== null) {
-    const cls = a.isApproaching ? 'soon' : 'normal';
-    etaHtml = `<span class="milestone-eta ${cls}">${fmtDays(a.estimatedDays)}</span>`;
+    const cls     = a.isApproaching ? 'soon' : 'normal';
+    const etaText = a.isApproaching ? fmtEta(a.estimatedDays) : fmtDays(a.estimatedDays);
+    etaHtml = `<span class="milestone-eta ${cls}">${etaText}</span>`;
   } else {
     etaHtml = `<span class="milestone-eta unknown">勢い計算中</span>`;
   }
+
+  // 投稿日・経過日数
+  const pub = new Date(a.publishedAt);
+  const elapsed = Math.floor((Date.now() - pub.getTime()) / (1000 * 3600 * 24));
+  const publishStr = `投稿: ${pub.getFullYear()}/${pub.getMonth()+1}/${pub.getDate()} · ${elapsed}日前`;
 
   const achievedHtml = a.hasAchievement ? `
     <div class="achieved-badge">
@@ -841,9 +879,11 @@ function buildCard(a) {
       <div class="views-row">
         <span class="views-count">${val}</span>
         <span class="views-unit">${unit}再生</span>
+        <span class="growth-inline">${growthHtml}</span>
       </div>
       ${achievedHtml}
       ${milestoneHtml}
+      <div class="publish-row">${escHtml(publishStr)}</div>
       <div class="card-footer">
         <div class="growth-row">${growthHtml}</div>
         <a class="tweet-btn card-btn" href="${escHtml(tweetUrl)}"
@@ -870,22 +910,10 @@ function renderMain() {
   if (sortBy === 'date') {
     analyses.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
   } else if (sortBy === 'soon') {
-    // もうすぐ順: ETA昇順（ETAなしは末尾）
-    analyses.sort((a, b) => {
-      const da = a.estimatedDays ?? Infinity;
-      const db = b.estimatedDays ?? Infinity;
-      return da - db;
-    });
+    // セクション分け描画側で各グループ内ソートを行うため、ここでは何もしない
   } else {
-    // 再生数モード: 達成(48h) → もうすぐ(日数昇順) → その他(再生数降順)
-    analyses.sort((a, b) => {
-      if (a.hasAchievement !== b.hasAchievement) return a.hasAchievement ? -1 : 1;
-      if (a.isApproaching  !== b.isApproaching)  return a.isApproaching  ? -1 : 1;
-      if (a.isApproaching && b.isApproaching) {
-        return (a.estimatedDays ?? 999) - (b.estimatedDays ?? 999);
-      }
-      return b.currentViews - a.currentViews;
-    });
+    // 再生数モード: 純粋な再生数降順
+    analyses.sort((a, b) => b.currentViews - a.currentViews);
   }
 
   // Stats bar・ツールバー表示
@@ -897,7 +925,28 @@ function renderMain() {
 
   const grid = document.createElement('div');
   grid.className = 'grid';
-  analyses.forEach(a => grid.appendChild(buildCard(a)));
+
+  if (sortBy === 'soon') {
+    // 注目モード: 達成済み(3日以内) / もうすぐ / その他 のセクション分け
+    const sec = [
+      { label: '達成済み', items: analyses.filter(a => a.achievedWithin3Days)
+          .sort((a, b) => (b.hasAchievement - a.hasAchievement) || b.currentViews - a.currentViews) },
+      { label: 'もうすぐ', items: analyses.filter(a => !a.achievedWithin3Days && a.isApproaching)
+          .sort((a, b) => (a.estimatedDays ?? Infinity) - (b.estimatedDays ?? Infinity)) },
+      { label: 'その他',   items: analyses.filter(a => !a.achievedWithin3Days && !a.isApproaching)
+          .sort((a, b) => b.currentViews - a.currentViews) },
+    ];
+    sec.forEach(({ label, items }) => {
+      if (!items.length) return;
+      const hdr = document.createElement('div');
+      hdr.className = 'section-header';
+      hdr.textContent = label;
+      grid.appendChild(hdr);
+      items.forEach(a => grid.appendChild(buildCard(a)));
+    });
+  } else {
+    analyses.forEach(a => grid.appendChild(buildCard(a)));
+  }
 
   const content = document.getElementById('mainContent');
   content.innerHTML = '';
