@@ -91,10 +91,26 @@ body {
   display: block;
   cursor: pointer;
 }
-.card.external:not(.achieved):not(.achieved-3d):not(.approaching) {
-  border-color: #1a7a8a;
-  background: linear-gradient(160deg, #080e18 0%, #0a1c28 60%);
-  box-shadow: 0 0 10px #0a5a6a35;
+/* 外部チャンネル: 紫系。ステータスクラスとの組み合わせも明示定義 */
+.card.external {
+  border-color: #9955ee;
+  background: linear-gradient(160deg, #0e0820 0%, #120e28 60%);
+  box-shadow: 0 0 14px #9955ee30;
+}
+.card.external.approaching {
+  border: 2px solid #cc8800;
+  background: linear-gradient(160deg, #180828 0%, #14122e 60%);
+  box-shadow: 0 0 18px #ffaa0045;
+}
+.card.external.achieved {
+  border: 2px solid #ffd700;
+  background: linear-gradient(160deg, #1a0e18 0%, #1a1028 55%);
+  box-shadow: 0 0 28px #ffd70070, inset 0 0 24px #ffd70012;
+}
+.card.external.achieved-3d {
+  border-color: #cc9900;
+  background: linear-gradient(160deg, #12082a 0%, #0e1028 60%);
+  box-shadow: 0 0 16px #ffd70045;
 }
 .card.approaching {
   border: 2px solid #cc8800;
