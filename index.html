@@ -446,6 +446,7 @@ body {
   <div class="toolbar-group">
     <button class="tbtn active" id="fAll"      onclick="setFilter('all')">全て</button>
     <button class="tbtn"        id="fMarked"   onclick="setFilter('marked')">★のみ</button>
+    <button class="tbtn"        id="fOwn"      onclick="setFilter('own')">自CH</button>
     <button class="tbtn"        id="fExternal" onclick="setFilter('external')">他CH</button>
   </div>
   <span class="toolbar-sep">|</span>
@@ -913,6 +914,7 @@ function setFilter(mode) {
   saveStore();
   document.getElementById('fAll').classList.toggle('active',      mode === 'all');
   document.getElementById('fMarked').classList.toggle('active',   mode === 'marked');
+  document.getElementById('fOwn').classList.toggle('active',      mode === 'own');
   document.getElementById('fExternal').classList.toggle('active', mode === 'external');
   renderMain();
 }
@@ -1099,6 +1101,7 @@ function renderMain() {
 
   // フィルタ
   if      (filterMode === 'marked')   analyses = analyses.filter(a => markedSet.has(a.id));
+  else if (filterMode === 'own')      analyses = analyses.filter(a => !a.isExternal);
   else if (filterMode === 'external') analyses = analyses.filter(a => a.isExternal);
 
   // ソート
@@ -1340,6 +1343,7 @@ loadStore();
 // ツールバーのボタン状態を復元
 document.getElementById('fAll').classList.toggle('active',      filterMode === 'all');
 document.getElementById('fMarked').classList.toggle('active',   filterMode === 'marked');
+document.getElementById('fOwn').classList.toggle('active',      filterMode === 'own');
 document.getElementById('fExternal').classList.toggle('active', filterMode === 'external');
 document.getElementById('sViews').classList.toggle('active', sortBy === 'views');
 document.getElementById('sDate').classList.toggle('active',  sortBy === 'date');
