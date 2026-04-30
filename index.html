@@ -572,20 +572,25 @@ function fmtDays(days) {
   return `約${Math.ceil(days)}日後`;
 }
 
-// estimatedDays から予想到達日時を「今日 HH:MM」「明日 HH:MM」「M/D HH:MM」形式で返す
+// タイムスタンプをJST（UTC+9）相当のDateに変換。getUTC*メソッドで各フィールドを取得する
+function jstDate(ts) {
+  return new Date(ts + 9 * 3600 * 1000);
+}
+
+// estimatedDays から予想到達日時を「今日 HH:MM」「明日 HH:MM」「M/D HH:MM」形式で返す（JST）
 function fmtEta(days) {
-  const d = new Date(Date.now() + days * 24 * 3600 * 1000);
-  const hhmm = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  const d = jstDate(Date.now() + days * 24 * 3600 * 1000);
+  const hhmm = String(d.getUTCHours()).padStart(2,'0') + ':' + String(d.getUTCMinutes()).padStart(2,'0');
   if (days < 1) return `今日 ${hhmm}`;
   if (days < 2) return `明日 ${hhmm}`;
-  return `${d.getMonth()+1}/${d.getDate()} ${hhmm}`;
+  return `${d.getUTCMonth()+1}/${d.getUTCDate()} ${hhmm}`;
 }
 
 function fmtDatetime(ts) {
-  const d = new Date(ts);
-  return `${d.getMonth()+1}/${d.getDate()} `
-       + `${String(d.getHours()).padStart(2,'0')}:`
-       + `${String(d.getMinutes()).padStart(2,'0')}`;
+  const d = jstDate(ts);
+  return `${d.getUTCMonth()+1}/${d.getUTCDate()} `
+       + `${String(d.getUTCHours()).padStart(2,'0')}:`
+       + `${String(d.getUTCMinutes()).padStart(2,'0')}`;
 }
 
 // 秒数 → "H:MM:SS" / "M:SS"
@@ -976,10 +981,11 @@ function buildCard(a) {
     etaHtml = `<span class="milestone-eta unknown">勢い計算中</span>`;
   }
 
-  // 投稿日・経過日数
-  const pub = new Date(a.publishedAt);
-  const elapsed = Math.floor((Date.now() - pub.getTime()) / (1000 * 3600 * 24));
-  const publishStr = `投稿: ${pub.getFullYear()}/${pub.getMonth()+1}/${pub.getDate()} · ${elapsed}日前`;
+  // 投稿日・経過日数（JST）
+  const pubTs  = new Date(a.publishedAt).getTime();
+  const pubJst = jstDate(pubTs);
+  const elapsed = Math.floor((Date.now() - pubTs) / (1000 * 3600 * 24));
+  const publishStr = `投稿: ${pubJst.getUTCFullYear()}/${pubJst.getUTCMonth()+1}/${pubJst.getUTCDate()} · ${elapsed}日前`;
 
   const achievedHtml = a.hasAchievement ? `
     <div class="achieved-badge">
