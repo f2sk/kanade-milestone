@@ -444,11 +444,11 @@ body {
 
 <div class="toolbar" id="toolbar" style="display:none">
   <div class="toolbar-group">
-    <button class="tbtn active" id="fAll"      onclick="setFilter('all')">全て</button>
-    <button class="tbtn"        id="fMarked"   onclick="setFilter('marked')">★のみ</button>
-    <button class="tbtn"        id="fOwn"      onclick="setFilter('own')">自CH</button>
-    <button class="tbtn"        id="fExternal" onclick="setFilter('external')">他CH</button>
+    <button class="tbtn active" id="fAll"      onclick="setChannelFilter('all')">全て</button>
+    <button class="tbtn"        id="fOwn"      onclick="setChannelFilter('own')">自CH</button>
+    <button class="tbtn"        id="fExternal" onclick="setChannelFilter('external')">他CH</button>
   </div>
+  <button class="tbtn" id="fMarked" onclick="toggleMarkFilter()">★</button>
   <span class="toolbar-sep">|</span>
   <div class="toolbar-group">
     <button class="tbtn active" id="sViews" onclick="setSort('views')">再生数</button>
@@ -553,7 +553,7 @@ let store = {
 
 let markedSet      = new Set();
 let showMarkedOnly = false;
-let filterMode     = 'all'; // 'all' | 'marked' | 'external'
+let channelFilter  = 'all'; // 'all' | 'own' | 'external'
 
 function loadStore() {
   try {
@@ -563,9 +563,9 @@ function loadStore() {
       store = { ...store, ...parsed, settings: { ...store.settings, ...parsed.settings } };
     }
   } catch(e) {}
-  markedSet      = new Set(store.markedIds || []);
-  filterMode     = store.settings.filterMode || (store.settings.showMarkedOnly ? 'marked' : 'all');
-  showMarkedOnly = filterMode === 'marked';
+  markedSet     = new Set(store.markedIds || []);
+  channelFilter = store.settings.channelFilter || 'all';
+  showMarkedOnly = store.settings.showMarkedOnly || false;
   sortBy         = store.settings.sortBy || 'views';
 }
 
@@ -906,16 +906,21 @@ function toggleMark(id) {
   renderMain();
 }
 
-function setFilter(mode) {
-  filterMode     = mode;
-  showMarkedOnly = mode === 'marked';
-  store.settings.filterMode     = mode;
-  store.settings.showMarkedOnly = mode === 'marked';
+function setChannelFilter(mode) {
+  channelFilter = mode;
+  store.settings.channelFilter = mode;
   saveStore();
   document.getElementById('fAll').classList.toggle('active',      mode === 'all');
-  document.getElementById('fMarked').classList.toggle('active',   mode === 'marked');
   document.getElementById('fOwn').classList.toggle('active',      mode === 'own');
   document.getElementById('fExternal').classList.toggle('active', mode === 'external');
+  renderMain();
+}
+
+function toggleMarkFilter() {
+  showMarkedOnly = !showMarkedOnly;
+  store.settings.showMarkedOnly = showMarkedOnly;
+  saveStore();
+  document.getElementById('fMarked').classList.toggle('active', showMarkedOnly);
   renderMain();
 }
 
@@ -1100,9 +1105,9 @@ function renderMain() {
   let analyses = videoIds.map(analyzeVideo).filter(Boolean);
 
   // フィルタ
-  if      (filterMode === 'marked')   analyses = analyses.filter(a => markedSet.has(a.id));
-  else if (filterMode === 'own')      analyses = analyses.filter(a => !a.isExternal);
-  else if (filterMode === 'external') analyses = analyses.filter(a => a.isExternal);
+  if (channelFilter === 'own')      analyses = analyses.filter(a => !a.isExternal);
+  else if (channelFilter === 'external') analyses = analyses.filter(a => a.isExternal);
+  if (showMarkedOnly) analyses = analyses.filter(a => markedSet.has(a.id));
 
   // ソート
   if (sortBy === 'date') {
@@ -1341,10 +1346,10 @@ function renderPinnedList() {
 // ─── 初期化 ─────────────────────────────────────────────
 loadStore();
 // ツールバーのボタン状態を復元
-document.getElementById('fAll').classList.toggle('active',      filterMode === 'all');
-document.getElementById('fMarked').classList.toggle('active',   filterMode === 'marked');
-document.getElementById('fOwn').classList.toggle('active',      filterMode === 'own');
-document.getElementById('fExternal').classList.toggle('active', filterMode === 'external');
+document.getElementById('fAll').classList.toggle('active',      channelFilter === 'all');
+document.getElementById('fOwn').classList.toggle('active',      channelFilter === 'own');
+document.getElementById('fExternal').classList.toggle('active', channelFilter === 'external');
+document.getElementById('fMarked').classList.toggle('active',   showMarkedOnly);
 document.getElementById('sViews').classList.toggle('active', sortBy === 'views');
 document.getElementById('sDate').classList.toggle('active',  sortBy === 'date');
 document.getElementById('sSoon').classList.toggle('active',  sortBy === 'soon');
