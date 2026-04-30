@@ -91,6 +91,11 @@ body {
   display: block;
   cursor: pointer;
 }
+.card.external:not(.achieved):not(.achieved-3d):not(.approaching) {
+  border-color: #1a7a8a;
+  background: linear-gradient(160deg, #080e18 0%, #0a1c28 60%);
+  box-shadow: 0 0 10px #0a5a6a35;
+}
 .card.approaching {
   border: 2px solid #cc8800;
   box-shadow: 0 0 18px #ffaa0045;
@@ -423,8 +428,9 @@ body {
 
 <div class="toolbar" id="toolbar" style="display:none">
   <div class="toolbar-group">
-    <button class="tbtn active" id="fAll"    onclick="setMarkFilter(false)">全て</button>
-    <button class="tbtn"        id="fMarked" onclick="setMarkFilter(true)">★のみ</button>
+    <button class="tbtn active" id="fAll"      onclick="setFilter('all')">全て</button>
+    <button class="tbtn"        id="fMarked"   onclick="setFilter('marked')">★のみ</button>
+    <button class="tbtn"        id="fExternal" onclick="setFilter('external')">他CH</button>
   </div>
   <span class="toolbar-sep">|</span>
   <div class="toolbar-group">
@@ -530,6 +536,7 @@ let store = {
 
 let markedSet      = new Set();
 let showMarkedOnly = false;
+let filterMode     = 'all'; // 'all' | 'marked' | 'external'
 
 function loadStore() {
   try {
@@ -540,7 +547,8 @@ function loadStore() {
     }
   } catch(e) {}
   markedSet      = new Set(store.markedIds || []);
-  showMarkedOnly = store.settings.showMarkedOnly || false;
+  filterMode     = store.settings.filterMode || (store.settings.showMarkedOnly ? 'marked' : 'all');
+  showMarkedOnly = filterMode === 'marked';
   sortBy         = store.settings.sortBy || 'views';
 }
 
@@ -876,12 +884,15 @@ function toggleMark(id) {
   renderMain();
 }
 
-function setMarkFilter(markedOnly) {
-  showMarkedOnly = markedOnly;
-  store.settings.showMarkedOnly = markedOnly;
+function setFilter(mode) {
+  filterMode     = mode;
+  showMarkedOnly = mode === 'marked';
+  store.settings.filterMode     = mode;
+  store.settings.showMarkedOnly = mode === 'marked';
   saveStore();
-  document.getElementById('fAll').classList.toggle('active',    !markedOnly);
-  document.getElementById('fMarked').classList.toggle('active',  markedOnly);
+  document.getElementById('fAll').classList.toggle('active',      mode === 'all');
+  document.getElementById('fMarked').classList.toggle('active',   mode === 'marked');
+  document.getElementById('fExternal').classList.toggle('active', mode === 'external');
   renderMain();
 }
 
@@ -963,9 +974,10 @@ function setSort(s) {
 
 // ─── レンダリング ───────────────────────────────────────
 function buildCard(a) {
-  const cardCls = a.hasAchievement      ? 'achieved'
-               : a.achievedWithin3Days ? 'achieved-3d'
-               : a.isApproaching       ? 'approaching' : '';
+  const statusCls = a.hasAchievement      ? 'achieved'
+                 : a.achievedWithin3Days ? 'achieved-3d'
+                 : a.isApproaching       ? 'approaching' : '';
+  const cardCls = [statusCls, a.isExternal ? 'external' : ''].filter(Boolean).join(' ');
   const { val, unit } = fmtViewsUnit(a.currentViews);
 
   // 進捗バー（前マイルストーン〜次マイルストーン間）
@@ -1064,8 +1076,9 @@ function renderMain() {
 
   let analyses = videoIds.map(analyzeVideo).filter(Boolean);
 
-  // マークフィルタ
-  if (showMarkedOnly) analyses = analyses.filter(a => markedSet.has(a.id));
+  // フィルタ
+  if      (filterMode === 'marked')   analyses = analyses.filter(a => markedSet.has(a.id));
+  else if (filterMode === 'external') analyses = analyses.filter(a => a.isExternal);
 
   // ソート
   if (sortBy === 'date') {
@@ -1304,8 +1317,9 @@ function renderPinnedList() {
 // ─── 初期化 ─────────────────────────────────────────────
 loadStore();
 // ツールバーのボタン状態を復元
-document.getElementById('fAll').classList.toggle('active',    !showMarkedOnly);
-document.getElementById('fMarked').classList.toggle('active',  showMarkedOnly);
+document.getElementById('fAll').classList.toggle('active',      filterMode === 'all');
+document.getElementById('fMarked').classList.toggle('active',   filterMode === 'marked');
+document.getElementById('fExternal').classList.toggle('active', filterMode === 'external');
 document.getElementById('sViews').classList.toggle('active', sortBy === 'views');
 document.getElementById('sDate').classList.toggle('active',  sortBy === 'date');
 document.getElementById('sSoon').classList.toggle('active',  sortBy === 'soon');
