@@ -290,7 +290,9 @@ body {
   border-radius: 12px;
   padding: 20px;
   width: 100%;
-  max-width: 380px;
+  max-width: 460px;
+  max-height: 90vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -352,6 +354,43 @@ body {
   transition: all .15s;
 }
 .tweet-btn:hover { border-color: #4a9eff; color: #4a9eff; }
+
+/* ── 外部チャンネルバッジ ─────────────────────────────── */
+.external-badge-row { margin-bottom: 4px; }
+.external-badge {
+  display: inline-block;
+  font-size: 9px;
+  color: #5aabff;
+  border: 1px solid #2a5a9a;
+  border-radius: 3px;
+  padding: 0 5px;
+  line-height: 16px;
+}
+
+/* ── 設定モーダル URL追加・ピン留めリスト ────────────── */
+.field-divider { border: none; border-top: 1px solid #1a3a5a; margin: 2px 0; }
+.field-textarea {
+  width: 100%;
+  background: #060d18;
+  border: 1px solid #1a3a5a;
+  border-radius: 5px;
+  color: #c8d8e8;
+  font-size: 11px;
+  padding: 8px 10px;
+  font-family: 'Courier New', monospace;
+  resize: vertical;
+  min-height: 70px;
+}
+.field-textarea:focus { outline: none; border-color: #4a9eff; }
+.pinned-list { display: flex; flex-direction: column; gap: 2px; max-height: 130px; overflow-y: auto; }
+.pinned-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px solid #0f1e2e;
+}
+.pinned-title { font-size: 10px; color: #4a7a9a; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -419,6 +458,28 @@ body {
       <div class="field-label">自動更新間隔（分）</div>
       <input class="field-input" type="number" id="cfgInterval" value="30" min="5" max="120">
     </div>
+    <hr class="field-divider">
+    <div>
+      <div class="field-label">動画URLを追加（他チャンネルMVなど）</div>
+      <textarea class="field-textarea" id="cfgPinnedUrls"
+                placeholder="https://www.youtube.com/watch?v=...&#10;複数行でまとめてペースト可"></textarea>
+      <button class="btn primary" id="addPinnedBtn" onclick="addPinnedVideos()"
+              style="margin-top:6px;width:100%">追加して取得</button>
+    </div>
+    <div id="pinnedListWrap" style="display:none">
+      <div class="field-label">追加済み動画</div>
+      <div class="pinned-list" id="pinnedList"></div>
+    </div>
+    <hr class="field-divider">
+    <div>
+      <div class="field-label">データの持ち出し・取り込み</div>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button class="btn" onclick="exportData()" style="flex:1">JSON 出力</button>
+        <button class="btn" onclick="importData()" style="flex:1">JSON 取り込み</button>
+      </div>
+    </div>
+    <input type="file" id="importFile" accept=".json" style="display:none"
+           onchange="onImportFile(this)">
     <div class="modal-footer">
       <button class="btn danger" onclick="clearData()">データ削除</button>
       <button class="btn" onclick="closeSettings()">キャンセル</button>
@@ -457,12 +518,14 @@ let store = {
     thresholdDays: 3,
     refreshMinutes: 30,
     showMarkedOnly: false,
-    sortBy: 'views'
+    sortBy: 'views',
+    ownChannelId: ''  // チャンネル取得時に保存
   },
   videos: {},
   lastUpdated: null,
-  markedIds: [],   // 手動マーク済み動画ID
-  notified: {}     // 通知済みマイルストーン { "videoId:milestone": timestamp }
+  markedIds: [],      // 手動マーク済み動画ID
+  pinnedVideoIds: [], // 手動追加した動画ID（他チャンネル含む）
+  notified: {}        // 通知済みマイルストーン { "videoId:milestone": timestamp }
 };
 
 let markedSet      = new Set();
@@ -562,14 +625,16 @@ async function apiGet(endpoint, params) {
 }
 
 async function fetchAllVideos() {
-  // チャンネルの uploads プレイリスト ID を取得
+  // チャンネルの uploads プレイリスト ID とチャンネルID を取得
   const chRes = await apiGet('channels', {
-    part: 'contentDetails',
+    part: 'id,contentDetails',
     forHandle: store.settings.channelHandle
   });
   if (!chRes.items?.length) {
     throw new Error('チャンネルが見つかりません: ' + store.settings.channelHandle);
   }
+  const ownChannelId = chRes.items[0].id;
+  store.settings.ownChannelId = ownChannelId;
   const uploadsId = chRes.items[0].contentDetails.relatedPlaylists.uploads;
 
   // 全動画IDを取得（50件ずつページネーション）
@@ -615,12 +680,14 @@ async function fetchAllVideos() {
           thumbnail: thumb,
           publishedAt: item.snippet.publishedAt,
           duration: dur,
+          channelId: item.snippet.channelId,
           history: []
         };
       }
       store.videos[item.id].title     = item.snippet.title;
       store.videos[item.id].thumbnail = thumb;
       store.videos[item.id].duration  = dur;
+      store.videos[item.id].channelId = item.snippet.channelId;
 
       const hist = store.videos[item.id].history;
       if (!hist.length || hist[hist.length - 1].views !== views) {
@@ -631,6 +698,48 @@ async function fetchAllVideos() {
     }
   }
   console.log(`[fetch] 保存: ${storedCount}件 / スキップ(配信中/未公開): ${skippedUpcoming}件`);
+
+  // ピン留め動画（チャンネル外）の統計を更新
+  const pinnedIds = (store.pinnedVideoIds || []).filter(id => {
+    const v = store.videos[id];
+    if (!v || !v.channelId) return true; // channelId未設定は再取得
+    return v.channelId !== ownChannelId;  // 他チャンネルのみ
+  });
+  if (pinnedIds.length) {
+    for (let i = 0; i < pinnedIds.length; i += 50) {
+      const batch = pinnedIds.slice(i, i + 50);
+      const pRes = await apiGet('videos', {
+        part: 'statistics,snippet,contentDetails',
+        id: batch.join(',')
+      });
+      for (const item of (pRes.items || [])) {
+        if (item.statistics?.viewCount === undefined) continue;
+        const dur   = parseDuration(item.contentDetails?.duration || '');
+        const views = parseInt(item.statistics.viewCount || '0');
+        const thumb = item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url || '';
+        if (!store.videos[item.id]) {
+          store.videos[item.id] = {
+            title: item.snippet.title,
+            thumbnail: thumb,
+            publishedAt: item.snippet.publishedAt,
+            duration: dur,
+            channelId: item.snippet.channelId,
+            history: []
+          };
+        }
+        store.videos[item.id].title     = item.snippet.title;
+        store.videos[item.id].thumbnail = thumb;
+        store.videos[item.id].duration  = dur;
+        store.videos[item.id].channelId = item.snippet.channelId;
+        const hist = store.videos[item.id].history;
+        if (!hist.length || hist[hist.length - 1].views !== views) {
+          hist.push({ ts: now, views });
+        }
+        store.videos[item.id].history = hist.filter(h => h.ts >= cutoff7d);
+      }
+    }
+    console.log(`[fetch] ピン留め動画更新: ${pinnedIds.length}件`);
+  }
 
   store.lastUpdated = now;
   saveStore();
@@ -680,6 +789,8 @@ function analyzeVideo(videoId) {
   const growthPerDay  = calcGrowthPerDay(video.history);
   const recentlyAchieved     = getRecentlyAchieved(video.history, 48);
   const recentlyAchieved72h  = getRecentlyAchieved(video.history, 72);
+  const ownCh = store.settings.ownChannelId;
+  const isExternal = !!(ownCh && video.channelId && video.channelId !== ownCh);
 
   let estimatedDays = null;
   if (nextMilestone && growthPerDay > 0) {
@@ -699,8 +810,50 @@ function analyzeVideo(videoId) {
     recentlyAchieved,
     isApproaching:       estimatedDays !== null && estimatedDays <= store.settings.thresholdDays,
     hasAchievement:      recentlyAchieved !== null,
-    achievedWithin3Days: recentlyAchieved72h !== null
+    achievedWithin3Days: recentlyAchieved72h !== null,
+    isExternal
   };
+}
+
+// ─── データ入出力 ────────────────────────────────────────
+function exportData() {
+  const json = JSON.stringify(store, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `kanade_milestone_${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData() {
+  document.getElementById('importFile').click();
+}
+
+function onImportFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (!parsed.videos || !parsed.settings) { alert('無効なデータ形式です'); return; }
+      store = { ...store, ...parsed, settings: { ...store.settings, ...parsed.settings } };
+      markedSet      = new Set(store.markedIds || []);
+      showMarkedOnly = store.settings.showMarkedOnly || false;
+      sortBy         = store.settings.sortBy || 'views';
+      saveStore();
+      closeSettings();
+      renderMain();
+      updatePageTitle();
+      alert('インポート完了');
+    } catch(err) {
+      alert('JSONの解析に失敗しました: ' + err.message);
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
 }
 
 // ─── 手動マーク ────────────────────────────────────────
@@ -852,6 +1005,10 @@ function buildCard(a) {
     ? `+${fmtViews(Math.round(a.growthPerDay))}/日`
     : 'データ蓄積中...';
 
+  const externalBadgeHtml = a.isExternal
+    ? '<div class="external-badge-row"><span class="external-badge">他チャンネル</span></div>'
+    : '';
+
   const isMarked  = markedSet.has(a.id);
   const durStr    = fmtDuration(a.duration);
   const tweetUrl  = buildTweetUrl(a);
@@ -871,6 +1028,7 @@ function buildCard(a) {
             onclick="toggleMark('${a.id}')" title="${isMarked ? 'マーク解除' : 'マーク'}">★</button>
     <div class="card-body">
       <div class="card-title">${escHtml(a.title)}</div>
+      ${externalBadgeHtml}
       <div class="views-row">
         <span class="views-count">${val}</span>
         <span class="views-unit">${unit}再生</span>
@@ -993,10 +1151,12 @@ async function doRefresh() {
 
 // ─── 設定 ───────────────────────────────────────────────
 function openSettings() {
-  document.getElementById('cfgApiKey').value   = store.settings.apiKey || '';
-  document.getElementById('cfgChannel').value  = store.settings.channelHandle || 'OtonoseKanade';
+  document.getElementById('cfgApiKey').value    = store.settings.apiKey || '';
+  document.getElementById('cfgChannel').value   = store.settings.channelHandle || 'OtonoseKanade';
   document.getElementById('cfgThreshold').value = store.settings.thresholdDays || 3;
   document.getElementById('cfgInterval').value  = store.settings.refreshMinutes || 30;
+  document.getElementById('cfgPinnedUrls').value = '';
+  renderPinnedList();
   document.getElementById('settingsModal').classList.add('open');
 }
 
@@ -1025,6 +1185,112 @@ function clearData() {
   saveStore();
   closeSettings();
   renderMain();
+}
+
+// ─── ピン留め動画管理 ────────────────────────────────────
+function parseVideoIds(text) {
+  const ids = new Set();
+  const re = /(?:youtu\.be\/|[?&]v=)([a-zA-Z0-9_-]{11})/g;
+  let m;
+  while ((m = re.exec(text)) !== null) ids.add(m[1]);
+  return [...ids];
+}
+
+async function addPinnedVideos() {
+  if (!store.settings.apiKey) { alert('先にAPIキーを保存してください'); return; }
+  const text = document.getElementById('cfgPinnedUrls').value.trim();
+  if (!text) return;
+  const newIds = parseVideoIds(text);
+  if (!newIds.length) { alert('有効なYouTube URLが見つかりませんでした'); return; }
+
+  const existing = new Set(store.pinnedVideoIds || []);
+  const toFetch = newIds.filter(id => !existing.has(id));
+  if (!toFetch.length) { alert('すべて追加済みです'); return; }
+
+  const btn = document.getElementById('addPinnedBtn');
+  btn.disabled = true;
+  btn.textContent = '取得中...';
+  try {
+    const now = Date.now();
+    const cutoff7d = now - 7 * 24 * 3600 * 1000;
+    for (let i = 0; i < toFetch.length; i += 50) {
+      const batch = toFetch.slice(i, i + 50);
+      const vRes = await apiGet('videos', {
+        part: 'statistics,snippet,contentDetails',
+        id: batch.join(',')
+      });
+      for (const item of (vRes.items || [])) {
+        if (item.statistics?.viewCount === undefined) continue;
+        const lbc = item.snippet.liveBroadcastContent;
+        if (lbc === 'live' || lbc === 'upcoming') continue;
+        const dur   = parseDuration(item.contentDetails?.duration || '');
+        const views = parseInt(item.statistics.viewCount || '0');
+        const thumb = item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url || '';
+        if (!store.videos[item.id]) {
+          store.videos[item.id] = {
+            title: item.snippet.title,
+            thumbnail: thumb,
+            publishedAt: item.snippet.publishedAt,
+            duration: dur,
+            channelId: item.snippet.channelId,
+            history: []
+          };
+        }
+        store.videos[item.id].title     = item.snippet.title;
+        store.videos[item.id].thumbnail = thumb;
+        store.videos[item.id].duration  = dur;
+        store.videos[item.id].channelId = item.snippet.channelId;
+        const hist = store.videos[item.id].history;
+        if (!hist.length || hist[hist.length - 1].views !== views) {
+          hist.push({ ts: now, views });
+        }
+        store.videos[item.id].history = hist.filter(h => h.ts >= cutoff7d);
+        existing.add(item.id);
+      }
+    }
+    store.pinnedVideoIds = [...existing];
+    saveStore();
+    document.getElementById('cfgPinnedUrls').value = '';
+    renderPinnedList();
+    renderMain();
+  } catch(e) {
+    alert('取得エラー: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '追加して取得';
+  }
+}
+
+function removePinnedVideo(id) {
+  store.pinnedVideoIds = (store.pinnedVideoIds || []).filter(v => v !== id);
+  // 他チャンネル動画のみstoreから削除（チャンネル動画は次回更新で復活するため残す）
+  const v = store.videos[id];
+  const ownCh = store.settings.ownChannelId;
+  if (v && ownCh && v.channelId && v.channelId !== ownCh) {
+    delete store.videos[id];
+  }
+  saveStore();
+  renderPinnedList();
+  renderMain();
+}
+
+function renderPinnedList() {
+  const wrap = document.getElementById('pinnedListWrap');
+  const list = document.getElementById('pinnedList');
+  if (!wrap || !list) return;
+  const ids = store.pinnedVideoIds || [];
+  if (!ids.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  list.innerHTML = ids.map(id => {
+    const v = store.videos[id];
+    const raw = v ? v.title : id;
+    const title = raw.length > 46 ? raw.substring(0, 46) + '…' : raw;
+    return `<div class="pinned-item">
+      <span class="pinned-title">${escHtml(title)}</span>
+      <button class="btn danger" style="font-size:9px;padding:2px 6px;flex-shrink:0"
+              onclick="removePinnedVideo('${escHtml(id)}')">削除</button>
+    </div>`;
+  }).join('');
 }
 
 // ─── 初期化 ─────────────────────────────────────────────
