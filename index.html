@@ -241,8 +241,8 @@ body {
 .progress-bar.approaching { background: linear-gradient(90deg, #886600, #ffaa00); }
 .progress-bar.normal      { background: linear-gradient(90deg, #1a4a8a, #4a9eff); }
 
-.growth-row   { display: none; }
-.publish-row  { font-size: 9px; color: #2a4a6a; margin-top: 5px; }
+.card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 5px; }
+.publish-row { font-size: 9px; color: #2a4a6a; }
 
 /* ── Status messages ───────────────────────────────── */
 .status-msg { text-align: center; padding: 60px 20px; font-size: 13px; color: #3a6a8a; }
@@ -322,13 +322,33 @@ body {
 .modal-footer { display: flex; gap: 8px; justify-content: flex-end; }
 
 /* ── Responsive ─────────────────────────────────────── */
-@media (max-width: 480px) {
-  .grid { grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px; }
-  .views-count { font-size: 18px; }
+@media (max-width: 640px) {
+  .grid { grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 6px; }
+  .card-body { padding: 5px 6px 6px; }
+  .card-title { font-size: 9px; min-height: 24px; margin-bottom: 4px; }
+  .views-count { font-size: 14px; }
+  .views-unit { font-size: 9px; }
+  .growth-inline { font-size: 9px; }
+  .achieved-badge { padding: 3px 5px; margin-bottom: 3px; }
+  .achieved-icon { font-size: 11px; }
+  .achieved-text { font-size: 9px; }
+  .milestone-row { padding: 3px 5px; margin-bottom: 3px; }
+  .milestone-label { font-size: 0; letter-spacing: 0; margin-bottom: 2px; }
+  .milestone-label::before { content: 'NEXT'; font-size: 8px; letter-spacing: 1px; color: #2a5a7a; }
+  .milestone-next { gap: 3px; }
   .milestone-target { font-size: 12px; }
+  .milestone-remaining { display: none; }
+  .milestone-eta { font-size: 9px; }
+  .progress-wrap { margin-top: 3px; }
+  .publish-row { font-size: 8px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tweet-btn { font-size: 9px; padding: 1px 5px; flex-shrink: 0; }
+  .external-badge { font-size: 8px; }
+  .mark-btn { width: 22px; height: 22px; font-size: 12px; }
 }
-@media (max-width: 360px) {
-  .grid { grid-template-columns: 1fr; }
+@media (max-width: 380px) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+  .views-count { font-size: 16px; }
+  .card-title { font-size: 10px; }
 }
 
 /* ── マークボタン ─────────────────────────────────────── */
@@ -1089,9 +1109,8 @@ function buildCard(a) {
       </div>
       ${achievedHtml}
       ${milestoneHtml}
-      <div class="publish-row">${escHtml(publishStr)}</div>
-      <div class="card-footer">
-        <div class="growth-row">${growthHtml}</div>
+      <div class="card-bottom">
+        <div class="publish-row">${escHtml(publishStr)}</div>
         <a class="tweet-btn card-btn" href="${escHtml(tweetUrl)}"
            target="_blank" rel="noopener" onclick="event.stopPropagation()">🐦 ツイート</a>
       </div>
