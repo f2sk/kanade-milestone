@@ -575,13 +575,15 @@ function fmtMilestone(n) {
 }
 
 function fmtDays(days) {
-  if (days < 0.5) return '今日中！';
-  if (days < 1.5) return '明日';
+  if (days <= 0)   return '今日中！';
+  if (days < 0.5)  return '今日中！';
+  if (days < 1.5)  return '明日';
   return `約${Math.ceil(days)}日後`;
 }
 
 // estimatedDays から予想到達日時を「今日 HH:MM」「明日 HH:MM」「M/D HH:MM」形式で返す
 function fmtEta(days) {
+  if (days <= 0) return 'まもなく';
   const d = new Date(Date.now() + days * 24 * 3600 * 1000);
   const hhmm = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
   if (days < 1) return `今日 ${hhmm}`;
@@ -808,9 +810,12 @@ function analyzeVideo(videoId) {
   const ownCh = store.settings.ownChannelId;
   const isExternal = !!(ownCh && video.channelId && video.channelId !== ownCh);
 
+  // 最終取得から現在までの経過分を増加速度で補正してETAを計算
   let estimatedDays = null;
   if (nextMilestone && growthPerDay > 0) {
-    estimatedDays = (nextMilestone - currentViews) / growthPerDay;
+    const lastTs = video.history[video.history.length - 1].ts;
+    const elapsedDays = (Date.now() - lastTs) / 86400000;
+    estimatedDays = (nextMilestone - currentViews) / growthPerDay - elapsedDays;
   }
 
   return {
@@ -1359,6 +1364,11 @@ function applySetup() {
   saveStore();
   doRefresh();
 }
+
+// 1分ごとに再描画してETAを最新に保つ（API呼び出しなし）
+setInterval(() => {
+  if (Object.keys(store.videos).length) renderMain();
+}, 60 * 1000);
 </script>
 </body>
 </html>
