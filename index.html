@@ -601,11 +601,16 @@ function fmtDays(days) {
 // estimatedDays から予想到達日時を「今日 HH:MM」「明日 HH:MM」「M/D HH:MM」形式で返す
 function fmtEta(days) {
   if (days <= 0) return 'まもなく';
-  const d = new Date(Date.now() + days * 24 * 3600 * 1000);
-  const hhmm = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
-  if (days < 1) return `今日 ${hhmm}`;
-  if (days < 2) return `明日 ${hhmm}`;
-  return `${d.getMonth()+1}/${d.getDate()} ${hhmm}`;
+  const now = new Date();
+  const eta = new Date(Date.now() + days * 24 * 3600 * 1000);
+  const hhmm = String(eta.getHours()).padStart(2,'0') + ':' + String(eta.getMinutes()).padStart(2,'0');
+  // 24時間以内かではなく日付で今日/明日を判定
+  const today  = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const etaDay = new Date(eta.getFullYear(), eta.getMonth(), eta.getDate());
+  const diff   = Math.round((etaDay - today) / 86400000);
+  if (diff === 0) return `今日 ${hhmm}`;
+  if (diff === 1) return `明日 ${hhmm}`;
+  return `${eta.getMonth()+1}/${eta.getDate()} ${hhmm}`;
 }
 
 function fmtDatetime(ts) {
