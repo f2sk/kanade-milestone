@@ -1479,6 +1479,10 @@ if (new URLSearchParams(location.search).get('mode') === 'public') {
       document.getElementById('lastUpdated').textContent = fmtDatetime(store.lastUpdated) + ' ' + localTzLabel();
     }
     renderMain();
+    // リロード前に通知がONだった場合、自動更新も復元する
+    if (store.settings.notifEnabled && Notification.permission === 'granted') {
+      togglePublicAutoRefresh(true);
+    }
   }).catch(err => {
     document.getElementById('mainContent').innerHTML =
       `<div style="color:#e06c75;padding:40px;text-align:center">データ読み込みエラー: ${escHtml(err.message)}</div>`;
