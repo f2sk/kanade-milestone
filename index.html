@@ -46,6 +46,7 @@ body {
 .btn:hover { border-color: #4a9eff; color: #4a9eff; }
 .btn:disabled { opacity: .4; cursor: not-allowed; }
 .btn.primary { border-color: #2a7acc; color: #4a9eff; }
+.btn.active  { border-color: #cc8800; color: #ffaa00; }
 .btn.danger { border-color: #4a1515; color: #cc4444; }
 .btn.danger:hover { border-color: #cc4444; }
 
@@ -567,7 +568,8 @@ let store = {
     refreshMinutes: 30,
     showMarkedOnly: false,
     sortBy: 'views',
-    ownChannelId: ''  // チャンネル取得時に保存
+    ownChannelId: '',  // チャンネル取得時に保存
+    notifEnabled: true
   },
   videos: {},
   lastUpdated: null,
@@ -979,21 +981,33 @@ function updatePageTitle() {
 function updateNotifBtn() {
   const btn = document.getElementById('notifBtn');
   if (!btn || !('Notification' in window)) { if (btn) btn.style.display = 'none'; return; }
-  if (Notification.permission === 'granted')  { btn.textContent = '🔔'; btn.title = '通知ON'; }
-  else if (Notification.permission === 'denied') { btn.textContent = '🔕'; btn.title = '通知がブロックされています（ブラウザ設定から変更してください）'; }
-  else { btn.textContent = '🔔'; btn.title = '通知を有効にする'; }
+  if (Notification.permission === 'denied') {
+    btn.textContent = '🔕'; btn.classList.remove('active'); btn.title = '通知がブロックされています（ブラウザ設定から変更してください）';
+  } else if (Notification.permission === 'granted' && store.settings.notifEnabled) {
+    btn.textContent = '🔔'; btn.classList.add('active'); btn.title = '通知ON（クリックで解除）';
+  } else {
+    btn.textContent = '🔔'; btn.classList.remove('active'); btn.title = '通知を有効にする';
+  }
 }
 
 async function requestNotif() {
   if (!('Notification' in window)) { alert('このブラウザは通知に対応していません'); return; }
-  if (Notification.permission === 'granted') { alert('通知はすでに有効です'); return; }
-  if (Notification.permission === 'denied')  { alert('通知がブロックされています。ブラウザのサイト設定から許可してください'); return; }
+  if (Notification.permission === 'denied') { alert('通知がブロックされています。ブラウザのサイト設定から許可してください'); return; }
+  if (Notification.permission === 'granted') {
+    store.settings.notifEnabled = !store.settings.notifEnabled;
+    saveStore();
+    updateNotifBtn();
+    return;
+  }
   await Notification.requestPermission();
+  if (Notification.permission === 'granted') store.settings.notifEnabled = true;
+  saveStore();
   updateNotifBtn();
 }
 
 function checkAndNotify(analyses) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (!store.settings.notifEnabled) return;
   const now = Date.now();
   // 7日より古い通知済み記録を削除
   Object.keys(store.notified).forEach(k => {
