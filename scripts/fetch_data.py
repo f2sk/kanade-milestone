@@ -90,14 +90,12 @@ def get_video_details(video_ids):
 
 
 def parse_duration(iso):
-    """ISO 8601 duration (PT1H2M3S) → "1:02:03" 形式"""
+    """ISO 8601 duration (PT1H2M3S) → 秒数（int）"""
     m = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', iso)
     if not m:
-        return '0:00'
+        return 0
     h, mn, s = (int(x or 0) for x in m.groups())
-    if h:
-        return f'{h}:{mn:02d}:{s:02d}'
-    return f'{mn}:{s:02d}'
+    return h * 3600 + mn * 60 + s
 
 
 def main():
