@@ -617,6 +617,11 @@ function togglePublicAutoRefresh(forceOn) {
   clearInterval(publicRefreshTimer);
   if (publicAutoRefresh) {
     publicRefreshTimer = setInterval(publicRefetch, PUBLIC_REFRESH_MS);
+  } else if (store.settings.notifEnabled) {
+    // 自動更新OFFにしたら通知も連動してOFFに
+    store.settings.notifEnabled = false;
+    saveStore();
+    updateNotifBtn();
   }
 }
 
