@@ -1465,7 +1465,7 @@ if (new URLSearchParams(location.search).get('mode') === 'public') {
   document.querySelector('.header-right').prepend(badge);
 
   // リロード前の通知状態を即時復元（データ取得を待たない）
-  if (store.settings.notifEnabled && Notification.permission === 'granted') {
+  if (store.settings.notifEnabled && 'Notification' in window && Notification.permission === 'granted') {
     togglePublicAutoRefresh(true);
   }
 
