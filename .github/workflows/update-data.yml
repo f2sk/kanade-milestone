@@ -2,7 +2,7 @@ name: Update YouTube Data
 
 on:
   schedule:
-    - cron: '*/30 * * * *'  # 30分ごと
+    - cron: '0,30 * * * *'  # 毎時 00分・30分
   workflow_dispatch:         # 手動実行も可
 
 jobs:
