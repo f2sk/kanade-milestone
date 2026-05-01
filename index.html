@@ -582,6 +582,44 @@ let markedSet      = new Set();
 let showMarkedOnly = false;
 let channelFilter  = 'all'; // 'all' | 'own' | 'external'
 
+let publicMode            = false;
+let publicAutoRefresh     = false;
+let publicRefreshTimer    = null;
+const PUBLIC_REFRESH_MS   = 30 * 60 * 1000;
+
+async function publicRefetch() {
+  try {
+    const t = Date.now();
+    const [data, cfg] = await Promise.all([
+      fetch(`./public_data.json?t=${t}`).then(r => r.json()),
+      fetch(`./public_config.json?t=${t}`).then(r => r.json()),
+    ]);
+    store.videos                 = data.videos || {};
+    store.settings.ownChannelId  = data.ownChannelId || '';
+    store.lastUpdated            = data.lastUpdated  || null;
+    store.settings.thresholdDays = cfg.thresholdDays || 3;
+    markedSet                    = new Set(cfg.markedIds || []);
+    store.pinnedVideoIds         = cfg.pinnedVideoIds || [];
+    if (store.lastUpdated) {
+      document.getElementById('lastUpdated').textContent = fmtDatetime(store.lastUpdated) + ' ' + localTzLabel();
+    }
+    const analyses = Object.keys(store.videos).map(analyzeVideo).filter(Boolean);
+    checkAndNotify(analyses);
+    renderMain();
+  } catch(e) {}
+}
+
+function togglePublicAutoRefresh(forceOn) {
+  publicAutoRefresh = forceOn !== undefined ? forceOn : !publicAutoRefresh;
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.toggle('active', publicAutoRefresh);
+  btn.title = publicAutoRefresh ? '自動更新 ON（クリックで停止）' : '自動更新 OFF（クリックで開始）';
+  clearInterval(publicRefreshTimer);
+  if (publicAutoRefresh) {
+    publicRefreshTimer = setInterval(publicRefetch, PUBLIC_REFRESH_MS);
+  }
+}
+
 function loadStore() {
   try {
     const s = localStorage.getItem(STORE_KEY);
@@ -995,12 +1033,16 @@ async function requestNotif() {
   if (Notification.permission === 'denied') { alert('通知がブロックされています。ブラウザのサイト設定から許可してください'); return; }
   if (Notification.permission === 'granted') {
     store.settings.notifEnabled = !store.settings.notifEnabled;
+    if (publicMode && store.settings.notifEnabled && !publicAutoRefresh) togglePublicAutoRefresh(true);
     saveStore();
     updateNotifBtn();
     return;
   }
   await Notification.requestPermission();
-  if (Notification.permission === 'granted') store.settings.notifEnabled = true;
+  if (Notification.permission === 'granted') {
+    store.settings.notifEnabled = true;
+    if (publicMode && !publicAutoRefresh) togglePublicAutoRefresh(true);
+  }
   saveStore();
   updateNotifBtn();
 }
@@ -1400,11 +1442,14 @@ updatePageTitle();
 updateNotifBtn();
 
 if (new URLSearchParams(location.search).get('mode') === 'public') {
-  // 公開モード: APIキー不要、static JSON から読み込み
-  document.getElementById('refreshBtn').style.display = 'none';
-  document.getElementById('notifBtn').style.display   = 'none';
-  // 設定ボタン（⚙）を非表示
+  publicMode = true;
+  // 設定ボタン（⚙）のみ非表示
   document.querySelector('.header-right .btn:last-child').style.display = 'none';
+  // 自動更新ボタンに差し替え
+  const refreshBtn = document.getElementById('refreshBtn');
+  refreshBtn.textContent = '⟳';
+  refreshBtn.title = '自動更新 OFF（クリックで開始）';
+  refreshBtn.onclick = () => togglePublicAutoRefresh();
   // 公開モードバッジをヘッダーに追加
   const badge = document.createElement('span');
   badge.textContent = '公開';
