@@ -585,7 +585,7 @@ let channelFilter  = 'all'; // 'all' | 'own' | 'external'
 let publicMode            = false;
 let publicAutoRefresh     = false;
 let publicRefreshTimer    = null;
-const PUBLIC_REFRESH_MS   = 30 * 60 * 1000;
+const PUBLIC_REFRESH_MS   = 10 * 60 * 1000;
 
 async function publicRefetch() {
   try {
