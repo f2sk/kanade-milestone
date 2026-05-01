@@ -115,7 +115,7 @@ body {
   background: linear-gradient(160deg, #1a0e18 0%, #1a1028 55%);
   box-shadow: 0 0 28px #ffd70070, inset 0 0 24px #ffd70012;
 }
-.card.external.achieved-3d {
+.card.external.achieved-1d {
   border-color: #cc9900;
   background: linear-gradient(160deg, #12082a 0%, #0e1028 60%);
   box-shadow: 0 0 16px #ffd70045;
@@ -129,7 +129,7 @@ body {
   background: linear-gradient(160deg, #1e1600 0%, #0e1826 55%);
   box-shadow: 0 0 28px #ffd70070, inset 0 0 24px #ffd70012;
 }
-.card.achieved-3d {
+.card.achieved-1d {
   border-color: #cc9900;
   box-shadow: 0 0 16px #ffd70045;
 }
@@ -892,7 +892,7 @@ function getRecentlyAchieved(history, hours = 48) {
 
   const oldViews = recent[0].views;
   const newViews = history[history.length - 1].views;
-  // 48時間で超えたマイルストーンのうち最大のものを返す
+  // 指定時間内に超えたマイルストーンのうち最大のものを返す
   const achieved = MILESTONES.filter(m => oldViews < m && newViews >= m);
   return achieved.length > 0 ? achieved[achieved.length - 1] : null;
 }
@@ -905,7 +905,7 @@ function analyzeVideo(videoId) {
   const nextMilestone = getNextMilestone(currentViews);
   const growthPerDay  = calcGrowthPerDay(video.history);
   const recentlyAchieved     = getRecentlyAchieved(video.history, 48);
-  const recentlyAchieved72h  = getRecentlyAchieved(video.history, 72);
+  const recentlyAchieved24h  = getRecentlyAchieved(video.history, 24);
   const ownCh = store.settings.ownChannelId;
   const isExternal = !!(ownCh && video.channelId && video.channelId !== ownCh);
 
@@ -930,7 +930,7 @@ function analyzeVideo(videoId) {
     recentlyAchieved,
     isApproaching:       estimatedDays !== null && estimatedDays <= store.settings.thresholdDays,
     hasAchievement:      recentlyAchieved !== null,
-    achievedWithin3Days: recentlyAchieved72h !== null,
+    achievedWithin1Day: recentlyAchieved24h !== null,
     isExternal
   };
 }
@@ -1104,7 +1104,7 @@ function setSort(s) {
 // ─── レンダリング ───────────────────────────────────────
 function buildCard(a) {
   const statusCls = a.hasAchievement      ? 'achieved'
-                 : a.achievedWithin3Days ? 'achieved-3d'
+                 : a.achievedWithin1Day ? 'achieved-1d'
                  : a.isApproaching       ? 'approaching' : '';
   const cardCls = [statusCls, a.isExternal ? 'external' : ''].filter(Boolean).join(' ');
   const { val, unit } = fmtViewsUnit(a.currentViews);
@@ -1230,13 +1230,13 @@ function renderMain() {
   grid.className = 'grid';
 
   if (sortBy === 'soon') {
-    // 注目モード: 達成済み(3日以内) / もうすぐ / その他 のセクション分け
+    // 注目モード: 達成済み(1日以内) / もうすぐ / その他 のセクション分け
     const sec = [
-      { label: '達成済み', items: analyses.filter(a => a.achievedWithin3Days)
+      { label: '達成済み', items: analyses.filter(a => a.achievedWithin1Day)
           .sort((a, b) => (b.hasAchievement - a.hasAchievement) || b.currentViews - a.currentViews) },
-      { label: 'もうすぐ', items: analyses.filter(a => !a.achievedWithin3Days && a.isApproaching)
+      { label: 'もうすぐ', items: analyses.filter(a => !a.achievedWithin1Day && a.isApproaching)
           .sort((a, b) => (a.estimatedDays ?? Infinity) - (b.estimatedDays ?? Infinity)) },
-      { label: 'その他',   items: analyses.filter(a => !a.achievedWithin3Days && !a.isApproaching)
+      { label: 'その他',   items: analyses.filter(a => !a.achievedWithin1Day && !a.isApproaching)
           .sort((a, b) => b.currentViews - a.currentViews) },
     ];
     sec.forEach(({ label, items }) => {
