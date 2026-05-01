@@ -600,8 +600,8 @@ function saveStore() {
 
 // ─── フォーマット ──────────────────────────────────────
 function fmtViewsUnit(n) {
-  if (n >= 100_000_000) return { val: (n / 100_000_000).toFixed(2), unit: '億' };
-  if (n >= 10_000)      return { val: (n / 10_000).toFixed(1),       unit: '万' };
+  if (n >= 100_000_000) return { val: (Math.floor(n / 1_000_000) / 100).toFixed(2), unit: '億' };
+  if (n >= 10_000)      return { val: (Math.floor(n / 1_000) / 10).toFixed(1),       unit: '万' };
   return { val: n.toLocaleString(), unit: '' };
 }
 
