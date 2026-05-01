@@ -1399,7 +1399,38 @@ document.getElementById('sSoon').classList.toggle('active',  sortBy === 'soon');
 updatePageTitle();
 updateNotifBtn();
 
-if (!store.settings.apiKey) {
+if (new URLSearchParams(location.search).get('mode') === 'public') {
+  // 公開モード: APIキー不要、static JSON から読み込み
+  document.getElementById('refreshBtn').style.display = 'none';
+  document.getElementById('notifBtn').style.display   = 'none';
+  // 設定ボタン（⚙）を非表示
+  document.querySelector('.header-right .btn:last-child').style.display = 'none';
+  // 公開モードバッジをヘッダーに追加
+  const badge = document.createElement('span');
+  badge.textContent = '公開';
+  badge.style.cssText = 'font-size:9px;padding:2px 6px;border:1px solid #1a5a2a;color:#4caf74;border-radius:3px;white-space:nowrap';
+  document.querySelector('.header-right').prepend(badge);
+
+  Promise.all([
+    fetch('./public_data.json').then(r => { if (!r.ok) throw new Error('public_data.json'); return r.json(); }),
+    fetch('./public_config.json').then(r => { if (!r.ok) throw new Error('public_config.json'); return r.json(); }),
+  ]).then(([data, cfg]) => {
+    store.videos                   = data.videos || {};
+    store.settings.ownChannelId    = data.ownChannelId || '';
+    store.lastUpdated              = data.lastUpdated  || null;
+    store.settings.thresholdDays   = cfg.thresholdDays || 3;
+    markedSet                      = new Set(cfg.markedIds || []);
+    store.pinnedVideoIds           = cfg.pinnedVideoIds || [];
+    document.getElementById('toolbar').style.display = 'flex';
+    if (store.lastUpdated) {
+      document.getElementById('lastUpdated').textContent = fmtDatetime(store.lastUpdated) + ' ' + localTzLabel();
+    }
+    renderMain();
+  }).catch(err => {
+    document.getElementById('mainContent').innerHTML =
+      `<div style="color:#e06c75;padding:40px;text-align:center">データ読み込みエラー: ${escHtml(err.message)}</div>`;
+  });
+} else if (!store.settings.apiKey) {
   document.getElementById('mainContent').innerHTML = `
     <div class="setup-screen">
       <div class="setup-box">
