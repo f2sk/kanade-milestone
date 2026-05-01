@@ -1464,6 +1464,11 @@ if (new URLSearchParams(location.search).get('mode') === 'public') {
   badge.style.cssText = 'font-size:9px;padding:2px 6px;border:1px solid #1a5a2a;color:#4caf74;border-radius:3px;white-space:nowrap';
   document.querySelector('.header-right').prepend(badge);
 
+  // リロード前の通知状態を即時復元（データ取得を待たない）
+  if (store.settings.notifEnabled && Notification.permission === 'granted') {
+    togglePublicAutoRefresh(true);
+  }
+
   Promise.all([
     fetch('./public_data.json').then(r => { if (!r.ok) throw new Error('public_data.json'); return r.json(); }),
     fetch('./public_config.json').then(r => { if (!r.ok) throw new Error('public_config.json'); return r.json(); }),
@@ -1479,10 +1484,6 @@ if (new URLSearchParams(location.search).get('mode') === 'public') {
       document.getElementById('lastUpdated').textContent = fmtDatetime(store.lastUpdated) + ' ' + localTzLabel();
     }
     renderMain();
-    // リロード前に通知がONだった場合、自動更新も復元する
-    if (store.settings.notifEnabled && Notification.permission === 'granted') {
-      togglePublicAutoRefresh(true);
-    }
   }).catch(err => {
     document.getElementById('mainContent').innerHTML =
       `<div style="color:#e06c75;padding:40px;text-align:center">データ読み込みエラー: ${escHtml(err.message)}</div>`;
