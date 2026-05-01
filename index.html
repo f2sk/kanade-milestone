@@ -1033,7 +1033,10 @@ async function requestNotif() {
   if (Notification.permission === 'denied') { alert('通知がブロックされています。ブラウザのサイト設定から許可してください'); return; }
   if (Notification.permission === 'granted') {
     store.settings.notifEnabled = !store.settings.notifEnabled;
-    if (publicMode && store.settings.notifEnabled && !publicAutoRefresh) togglePublicAutoRefresh(true);
+    if (publicMode) {
+      if (store.settings.notifEnabled && !publicAutoRefresh) togglePublicAutoRefresh(true);
+      if (!store.settings.notifEnabled && publicAutoRefresh) togglePublicAutoRefresh(false);
+    }
     saveStore();
     updateNotifBtn();
     return;
