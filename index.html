@@ -1527,14 +1527,27 @@ async function addPinnedPlaylist() {
       alert('プレイリストが見つかりません（非公開またはURLが不正）'); return;
     }
     const title = plRes.items[0].snippet.title;
+
+    // プレイリスト内の動画IDを取得し、手動ピン済みと重複するものをプレイリスト管理に移行
+    // （markedIds のスターはそのまま維持）
+    btn.textContent = '動画リスト取得中...';
+    const plVideoIds = await fetchPlaylistVideoIds(plId);
+    const pinnedSet = new Set(store.pinnedVideoIds || []);
+    const moved = plVideoIds.filter(id => pinnedSet.has(id));
+    if (moved.length) {
+      store.pinnedVideoIds = (store.pinnedVideoIds || []).filter(id => !moved.includes(id));
+    }
+
     existing.add(plId);
     store.pinnedPlaylistIds = [...existing];
     if (!store.pinnedPlaylistMeta) store.pinnedPlaylistMeta = {};
     store.pinnedPlaylistMeta[plId] = { title };
     saveStore();
     document.getElementById('cfgPlaylistUrl').value = '';
+    renderPinnedList();
     renderPlaylistList();
-    alert(`「${title}」を追加しました。次回更新時に動画が自動で反映されます。`);
+    const movedMsg = moved.length ? `\n手動追加済みの${moved.length}件をプレイリスト管理に移行しました（スターは維持）。` : '';
+    alert(`「${title}」を追加しました。次回更新時に動画が自動で反映されます。${movedMsg}`);
   } catch(e) {
     alert('取得エラー: ' + e.message);
   } finally {
