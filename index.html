@@ -601,7 +601,7 @@ let store = {
 };
 
 let markedSet      = new Set();
-let showMarkedOnly = false;
+let showMarkedOnly = true;
 let channelFilter  = 'all'; // 'all' | 'own' | 'external'
 
 let publicMode            = false;
@@ -656,9 +656,9 @@ function loadStore() {
     }
   } catch(e) {}
   markedSet     = new Set(store.markedIds || []);
-  channelFilter = store.settings.channelFilter || 'all';
-  showMarkedOnly = store.settings.showMarkedOnly || false;
-  sortBy         = store.settings.sortBy || 'views';
+  channelFilter  = store.settings.channelFilter  ?? 'all';
+  showMarkedOnly = store.settings.showMarkedOnly ?? true;
+  sortBy         = store.settings.sortBy         ?? 'soon';
 }
 
 function saveStore() {
@@ -1040,8 +1040,8 @@ function onImportFile(input) {
       if (!parsed.videos || !parsed.settings) { alert('無効なデータ形式です'); return; }
       store = { ...store, ...parsed, settings: { ...store.settings, ...parsed.settings } };
       markedSet      = new Set(store.markedIds || []);
-      showMarkedOnly = store.settings.showMarkedOnly || false;
-      sortBy         = store.settings.sortBy || 'views';
+      showMarkedOnly = store.settings.showMarkedOnly ?? true;
+      sortBy         = store.settings.sortBy         ?? 'soon';
       saveStore();
       closeSettings();
       renderMain();
@@ -1168,7 +1168,7 @@ function checkAndNotify(analyses) {
 }
 
 // ─── ソート状態 ────────────────────────────────────────
-let sortBy = 'views'; // 'views' | 'date'
+let sortBy = 'soon';
 
 function setSort(s) {
   sortBy = s;
