@@ -484,9 +484,10 @@ body {
   <button class="tbtn" id="fMarked" onclick="toggleMarkFilter()">★</button>
   <span class="toolbar-sep">|</span>
   <div class="toolbar-group">
-    <button class="tbtn active" id="sViews" onclick="setSort('views')">再生数</button>
+    <button class="tbtn active" id="sViews"  onclick="setSort('views')">再生数</button>
     <button class="tbtn"        id="sDate"  onclick="setSort('date')">投稿日</button>
     <button class="tbtn"        id="sSoon"  onclick="setSort('soon')">注目</button>
+    <button class="tbtn"        id="sTrend" onclick="setSort('trend')">勢い</button>
   </div>
 </div>
 
@@ -1173,9 +1174,10 @@ function setSort(s) {
   sortBy = s;
   store.settings.sortBy = s;
   saveStore();
-  document.getElementById('sViews').classList.toggle('active', s === 'views');
-  document.getElementById('sDate').classList.toggle('active',  s === 'date');
-  document.getElementById('sSoon').classList.toggle('active',  s === 'soon');
+  document.getElementById('sViews').classList.toggle('active',  s === 'views');
+  document.getElementById('sDate').classList.toggle('active',   s === 'date');
+  document.getElementById('sSoon').classList.toggle('active',   s === 'soon');
+  document.getElementById('sTrend').classList.toggle('active',  s === 'trend');
   renderMain();
 }
 
@@ -1290,6 +1292,9 @@ function renderMain() {
   // ソート
   if (sortBy === 'date') {
     analyses.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+  } else if (sortBy === 'trend') {
+    // 勢い: 直近72h の増加速度（views/日）降順。データ未蓄積は末尾
+    analyses.sort((a, b) => (b.growthPerDay ?? -Infinity) - (a.growthPerDay ?? -Infinity));
   } else if (sortBy === 'soon') {
     // セクション分け描画側で各グループ内ソートを行うため、ここでは何もしない
   } else {
@@ -1607,9 +1612,10 @@ document.getElementById('fAll').classList.toggle('active',      channelFilter ==
 document.getElementById('fOwn').classList.toggle('active',      channelFilter === 'own');
 document.getElementById('fExternal').classList.toggle('active', channelFilter === 'external');
 document.getElementById('fMarked').classList.toggle('active',   showMarkedOnly);
-document.getElementById('sViews').classList.toggle('active', sortBy === 'views');
-document.getElementById('sDate').classList.toggle('active',  sortBy === 'date');
-document.getElementById('sSoon').classList.toggle('active',  sortBy === 'soon');
+document.getElementById('sViews').classList.toggle('active',  sortBy === 'views');
+document.getElementById('sDate').classList.toggle('active',   sortBy === 'date');
+document.getElementById('sSoon').classList.toggle('active',   sortBy === 'soon');
+document.getElementById('sTrend').classList.toggle('active',  sortBy === 'trend');
 updatePageTitle();
 updateNotifBtn();
 
