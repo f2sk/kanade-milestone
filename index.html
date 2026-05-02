@@ -528,6 +528,18 @@ body {
     </div>
     <hr class="field-divider">
     <div>
+      <div class="field-label">プレイリストを監視（新規動画を自動追加）</div>
+      <textarea class="field-textarea" id="cfgPlaylistUrl"
+                placeholder="https://www.youtube.com/playlist?list=PL..."></textarea>
+      <button class="btn primary" id="addPlaylistBtn" onclick="addPinnedPlaylist()"
+              style="margin-top:6px;width:100%">プレイリストを追加</button>
+    </div>
+    <div id="playlistListWrap" style="display:none">
+      <div class="field-label">監視中のプレイリスト</div>
+      <div class="pinned-list" id="playlistList"></div>
+    </div>
+    <hr class="field-divider">
+    <div>
       <div class="field-label">データの持ち出し・取り込み</div>
       <div style="display:flex;gap:8px;margin-top:6px">
         <button class="btn" onclick="exportData()" style="flex:1">JSON 出力</button>
@@ -580,9 +592,11 @@ let store = {
   },
   videos: {},
   lastUpdated: null,
-  markedIds: [],      // 手動マーク済み動画ID
-  pinnedVideoIds: [], // 手動追加した動画ID（他チャンネル含む）
-  notified: {}        // 通知済みマイルストーン { "videoId:milestone": timestamp }
+  markedIds: [],            // 手動マーク済み動画ID
+  pinnedVideoIds: [],       // 手動追加した動画ID（他チャンネル含む）
+  pinnedPlaylistIds: [],    // 監視プレイリストID
+  pinnedPlaylistMeta: {},   // { playlistId: { title } } 表示名キャッシュ
+  notified: {}              // 通知済みマイルストーン { "videoId:milestone": timestamp }
 };
 
 let markedSet      = new Set();
@@ -741,6 +755,19 @@ async function apiGet(endpoint, params) {
   return data;
 }
 
+async function fetchPlaylistVideoIds(playlistId) {
+  const ids = [];
+  let pageToken = null;
+  do {
+    const params = { part: 'contentDetails', playlistId, maxResults: 50 };
+    if (pageToken) params.pageToken = pageToken;
+    const pl = await apiGet('playlistItems', params);
+    ids.push(...pl.items.map(i => i.contentDetails.videoId));
+    pageToken = pl.nextPageToken || null;
+  } while (pageToken);
+  return ids;
+}
+
 async function fetchAllVideos() {
   // チャンネルの uploads プレイリスト ID とチャンネルID を取得
   const chRes = await apiGet('channels', {
@@ -856,6 +883,57 @@ async function fetchAllVideos() {
       }
     }
     console.log(`[fetch] ピン留め動画更新: ${pinnedIds.length}件`);
+  }
+
+  // 監視プレイリストから動画IDを収集・統計更新
+  const watchedPlaylists = store.pinnedPlaylistIds || [];
+  if (watchedPlaylists.length) {
+    const plVideoIds = new Set();
+    for (const plId of watchedPlaylists) {
+      try {
+        const ids = await fetchPlaylistVideoIds(plId);
+        ids.forEach(id => plVideoIds.add(id));
+      } catch(e) {
+        console.warn(`[fetch] プレイリスト取得エラー [${plId}]:`, e.message);
+      }
+    }
+    // 自チャンネル動画は既に更新済みなので除外
+    const plIds = [...plVideoIds].filter(id => {
+      const v = store.videos[id];
+      return !v || v.channelId !== ownChannelId;
+    });
+    if (plIds.length) {
+      for (let i = 0; i < plIds.length; i += 50) {
+        const batch = plIds.slice(i, i + 50);
+        const pRes = await apiGet('videos', {
+          part: 'statistics,snippet,contentDetails',
+          id: batch.join(',')
+        });
+        for (const item of (pRes.items || [])) {
+          if (item.statistics?.viewCount === undefined) continue;
+          const lbc = item.snippet.liveBroadcastContent;
+          if (lbc === 'live' || lbc === 'upcoming') continue;
+          const dur   = parseDuration(item.contentDetails?.duration || '');
+          const views = parseInt(item.statistics.viewCount || '0');
+          const thumb = item.snippet.thumbnails.medium?.url || item.snippet.thumbnails.default?.url || '';
+          if (!store.videos[item.id]) {
+            store.videos[item.id] = {
+              title: item.snippet.title, thumbnail: thumb,
+              publishedAt: item.snippet.publishedAt,
+              duration: dur, channelId: item.snippet.channelId, history: []
+            };
+          }
+          store.videos[item.id].title     = item.snippet.title;
+          store.videos[item.id].thumbnail = thumb;
+          store.videos[item.id].duration  = dur;
+          store.videos[item.id].channelId = item.snippet.channelId;
+          const hist = store.videos[item.id].history;
+          if (!hist.length || hist[hist.length - 1].views !== views) hist.push({ ts: now, views });
+          store.videos[item.id].history = hist.filter(h => h.ts >= cutoff7d);
+        }
+      }
+      console.log(`[fetch] プレイリスト動画更新: ${plIds.length}件`);
+    }
   }
 
   store.lastUpdated = now;
@@ -1306,7 +1384,9 @@ function openSettings() {
   document.getElementById('cfgThreshold').value = store.settings.thresholdDays || 3;
   document.getElementById('cfgInterval').value  = store.settings.refreshMinutes || 30;
   document.getElementById('cfgPinnedUrls').value = '';
+  document.getElementById('cfgPlaylistUrl').value = '';
   renderPinnedList();
+  renderPlaylistList();
   document.getElementById('settingsModal').classList.add('open');
 }
 
@@ -1337,7 +1417,7 @@ function clearData() {
   renderMain();
 }
 
-// ─── ピン留め動画管理 ────────────────────────────────────
+// ─── ピン留め動画・プレイリスト管理 ──────────────────────
 function parseVideoIds(text) {
   const ids = new Set();
   const re = /(?:youtu\.be\/|[?&]v=)([a-zA-Z0-9_-]{11})/g;
@@ -1422,6 +1502,70 @@ function removePinnedVideo(id) {
   saveStore();
   renderPinnedList();
   renderMain();
+}
+
+function parsePlaylistId(text) {
+  const m = text.trim().match(/[?&]list=([A-Za-z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
+async function addPinnedPlaylist() {
+  if (!store.settings.apiKey) { alert('先にAPIキーを保存してください'); return; }
+  const text = document.getElementById('cfgPlaylistUrl').value.trim();
+  if (!text) return;
+  const plId = parsePlaylistId(text);
+  if (!plId) { alert('有効なプレイリストURLが見つかりませんでした'); return; }
+
+  const existing = new Set(store.pinnedPlaylistIds || []);
+  if (existing.has(plId)) { alert('すでに追加済みのプレイリストです'); return; }
+
+  const btn = document.getElementById('addPlaylistBtn');
+  btn.disabled = true; btn.textContent = '確認中...';
+  try {
+    const plRes = await apiGet('playlists', { part: 'snippet', id: plId });
+    if (!plRes.items?.length) {
+      alert('プレイリストが見つかりません（非公開またはURLが不正）'); return;
+    }
+    const title = plRes.items[0].snippet.title;
+    existing.add(plId);
+    store.pinnedPlaylistIds = [...existing];
+    if (!store.pinnedPlaylistMeta) store.pinnedPlaylistMeta = {};
+    store.pinnedPlaylistMeta[plId] = { title };
+    saveStore();
+    document.getElementById('cfgPlaylistUrl').value = '';
+    renderPlaylistList();
+    alert(`「${title}」を追加しました。次回更新時に動画が自動で反映されます。`);
+  } catch(e) {
+    alert('取得エラー: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'プレイリストを追加';
+  }
+}
+
+function removePinnedPlaylist(plId) {
+  store.pinnedPlaylistIds = (store.pinnedPlaylistIds || []).filter(id => id !== plId);
+  if (store.pinnedPlaylistMeta) delete store.pinnedPlaylistMeta[plId];
+  saveStore();
+  renderPlaylistList();
+}
+
+function renderPlaylistList() {
+  const wrap = document.getElementById('playlistListWrap');
+  const list = document.getElementById('playlistList');
+  if (!wrap || !list) return;
+  const ids = store.pinnedPlaylistIds || [];
+  if (!ids.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  list.innerHTML = ids.map(plId => {
+    const meta  = store.pinnedPlaylistMeta?.[plId];
+    const raw   = meta?.title || plId;
+    const title = raw.length > 46 ? raw.substring(0, 46) + '…' : raw;
+    return `<div class="pinned-item">
+      <span class="pinned-title">${escHtml(title)}</span>
+      <button class="btn danger" style="font-size:9px;padding:2px 6px;flex-shrink:0"
+              onclick="removePinnedPlaylist('${escHtml(plId)}')">削除</button>
+    </div>`;
+  }).join('');
 }
 
 function renderPinnedList() {
