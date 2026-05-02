@@ -107,9 +107,10 @@ def main():
     with open(CONFIG_FILE, encoding='utf-8') as f:
         config = json.load(f)
 
-    channel_handle  = config.get('channelHandle', '')
-    own_channel_id  = config.get('ownChannelId', '')
-    pinned_ids      = config.get('pinnedVideoIds', [])
+    channel_handle      = config.get('channelHandle', '')
+    own_channel_id      = config.get('ownChannelId', '')
+    pinned_ids          = list(config.get('pinnedVideoIds', []))
+    pinned_playlist_ids = config.get('pinnedPlaylistIds', [])
 
     # 既存データ読み込み
     existing_videos = {}
@@ -125,6 +126,13 @@ def main():
         print(f'チャンネルID を解決中: {channel_handle}')
         own_channel_id = get_channel_id(channel_handle)
         print(f'  → {own_channel_id}')
+
+    # 監視プレイリストから動画IDを展開して pinnedIds に追加
+    for pl_id in pinned_playlist_ids:
+        print(f'プレイリスト取得中: {pl_id}')
+        pl_video_ids = get_video_ids_from_playlist(pl_id)
+        print(f'  → {len(pl_video_ids)} 件')
+        pinned_ids = list(dict.fromkeys(pinned_ids + pl_video_ids))
 
     # チャンネル動画一覧取得
     channel_video_ids = []
