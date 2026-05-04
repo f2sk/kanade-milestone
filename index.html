@@ -578,7 +578,8 @@ function getPrevMilestone(views) {
 }
 
 // ─── ストレージ ───────────────────────────────────────
-const STORE_KEY = 'kanade_milestone_tracker';
+const IS_PUBLIC_MODE = new URLSearchParams(location.search).get('mode') === 'public';
+const STORE_KEY = IS_PUBLIC_MODE ? 'kanade_milestone_tracker_public' : 'kanade_milestone_tracker';
 
 let store = {
   settings: {
@@ -1619,7 +1620,7 @@ document.getElementById('sTrend').classList.toggle('active',  sortBy === 'trend'
 updatePageTitle();
 updateNotifBtn();
 
-if (new URLSearchParams(location.search).get('mode') === 'public') {
+if (IS_PUBLIC_MODE) {
   publicMode = true;
   // 設定ボタン（⚙）のみ非表示
   document.querySelector('.header-right .btn:last-child').style.display = 'none';
