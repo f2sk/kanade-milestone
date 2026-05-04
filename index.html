@@ -1651,6 +1651,7 @@ if (IS_PUBLIC_MODE) {
     store.settings.channelHandle    = cfg.channelHandle || store.settings.channelHandle;
     markedSet                       = new Set(cfg.markedIds || []);
     store.pinnedVideoIds            = cfg.pinnedVideoIds || [];
+    updatePageTitle();
     document.getElementById('toolbar').style.display = 'flex';
     if (store.lastUpdated) {
       document.getElementById('lastUpdated').textContent = fmtDatetime(store.lastUpdated) + ' ' + localTzLabel();
