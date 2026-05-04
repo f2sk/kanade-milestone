@@ -1618,7 +1618,7 @@ document.getElementById('sViews').classList.toggle('active',  sortBy === 'views'
 document.getElementById('sDate').classList.toggle('active',   sortBy === 'date');
 document.getElementById('sSoon').classList.toggle('active',   sortBy === 'soon');
 document.getElementById('sTrend').classList.toggle('active',  sortBy === 'trend');
-updatePageTitle();
+if (!IS_PUBLIC_MODE) updatePageTitle(); // 公開モードはfetch完了後に呼ぶ
 updateNotifBtn();
 
 if (IS_PUBLIC_MODE) {
