@@ -1644,12 +1644,13 @@ if (IS_PUBLIC_MODE) {
     fetch('./public_data.json').then(r => { if (!r.ok) throw new Error('public_data.json'); return r.json(); }),
     fetch('./public_config.json').then(r => { if (!r.ok) throw new Error('public_config.json'); return r.json(); }),
   ]).then(([data, cfg]) => {
-    store.videos                   = data.videos || {};
-    store.settings.ownChannelId    = data.ownChannelId || '';
-    store.lastUpdated              = data.lastUpdated  || null;
-    store.settings.thresholdDays   = cfg.thresholdDays || 3;
-    markedSet                      = new Set(cfg.markedIds || []);
-    store.pinnedVideoIds           = cfg.pinnedVideoIds || [];
+    store.videos                    = data.videos || {};
+    store.settings.ownChannelId     = data.ownChannelId || '';
+    store.lastUpdated               = data.lastUpdated  || null;
+    store.settings.thresholdDays    = cfg.thresholdDays || 3;
+    store.settings.channelHandle    = cfg.channelHandle || store.settings.channelHandle;
+    markedSet                       = new Set(cfg.markedIds || []);
+    store.pinnedVideoIds            = cfg.pinnedVideoIds || [];
     document.getElementById('toolbar').style.display = 'flex';
     if (store.lastUpdated) {
       document.getElementById('lastUpdated').textContent = fmtDatetime(store.lastUpdated) + ' ' + localTzLabel();
