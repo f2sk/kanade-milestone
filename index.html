@@ -1320,7 +1320,7 @@ function renderMain() {
       { label: 'もうすぐ', items: analyses.filter(a => !a.achievedWithin1Day && a.isApproaching)
           .sort((a, b) => (a.estimatedDays ?? Infinity) - (b.estimatedDays ?? Infinity)) },
       { label: 'その他',   items: analyses.filter(a => !a.achievedWithin1Day && !a.isApproaching)
-          .sort((a, b) => b.currentViews - a.currentViews) },
+          .sort((a, b) => (a.estimatedDays ?? Infinity) - (b.estimatedDays ?? Infinity)) },
     ];
     sec.forEach(({ label, items }) => {
       if (!items.length) return;
