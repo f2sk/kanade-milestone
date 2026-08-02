@@ -13,7 +13,7 @@ YouTube Data API v3 から再生数履歴を取得・更新するスクリプト
 動作:
     1. public_config.json からチャンネル設定・マーク・追加URLを読み込む
     2. YouTube API でチャンネル動画と追加動画の最新再生数を取得
-    3. public_data.json に履歴を追記（7日分保持）して上書き保存
+    3. public_data.json に履歴を追記（直近7日は30分刻み・7日超は2時間刻みで最大30日保持）して上書き保存
 """
 
 import json
@@ -29,7 +29,9 @@ API_KEY    = os.environ.get('YOUTUBE_API_KEY', '')
 BASE_URL   = 'https://www.googleapis.com/youtube/v3'
 DATA_FILE  = 'public_data.json'
 CONFIG_FILE = 'public_config.json'
-HISTORY_DAYS = 7
+HISTORY_DAYS = 30                    # 履歴の最大保持日数
+FINE_DAYS = 7                        # 直近この日数は30分刻みのまま保持（外挿予測用）
+COARSE_BUCKET_MS = 2 * 3600 * 1000   # 7日より古い部分は2時間バケットに間引く（同バケットは最新のみ）
 
 
 def yt_get(endpoint, **params):
@@ -98,6 +100,19 @@ def parse_duration(iso):
     return h * 3600 + mn * 60 + s
 
 
+def compact_history(history, fine_cutoff):
+    """直近(fine_cutoff以降)は30分刻みのまま、それより古い部分は2時間バケットで最新のみ残す"""
+    old_buckets = {}
+    recent = []
+    for h in history:  # history は時系列昇順
+        if h['ts'] >= fine_cutoff:
+            recent.append(h)
+        else:
+            old_buckets[h['ts'] // COARSE_BUCKET_MS] = h  # 同バケットは後勝ち＝最新
+    old = [old_buckets[b] for b in sorted(old_buckets)]
+    return old + recent
+
+
 def main():
     if not API_KEY:
         print('ERROR: YOUTUBE_API_KEY が設定されていません', file=sys.stderr)
@@ -149,17 +164,20 @@ def main():
     details = get_video_details(all_ids)
     print(f'取得成功: {len(details)} 件')
 
-    # 履歴更新
-    now_ms   = int(time.time() * 1000)
-    cutoff   = now_ms - HISTORY_DAYS * 86400 * 1000
+    # 履歴更新（最大30日保持。直近7日は30分刻み、7日超は2時間刻みに間引く）
+    now_ms      = int(time.time() * 1000)
+    cutoff      = now_ms - HISTORY_DAYS * 86400 * 1000
+    fine_cutoff = now_ms - FINE_DAYS * 86400 * 1000
 
     for vid, info in details.items():
         views  = info.pop('views')
         prev   = existing_videos.get(vid, {})
         history = [h for h in prev.get('history', []) if h['ts'] >= cutoff]
-        # 直近と同じ再生数なら追記しない（不要な差分コミットを防ぐ）
+        # 追記（直近は30分刻みのまま。直近と同じ再生数なら追記しない）
         if not history or history[-1]['views'] != views:
             history.append({'ts': now_ms, 'views': views})
+        # 7日より古い部分を2時間刻みへ間引く
+        history = compact_history(history, fine_cutoff)
         existing_videos[vid] = {**info, 'history': history}
 
     # チャンネルから消えた動画はpinnedでなければ除外

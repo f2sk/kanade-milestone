@@ -98,7 +98,6 @@ body {
   text-decoration: none;
   color: inherit;
   display: block;
-  cursor: pointer;
 }
 /* 外部チャンネル: 紫系。ステータスクラスとの組み合わせも明示定義 */
 .card.external {
@@ -175,7 +174,7 @@ body {
 .tbtn:hover  { border-color: #3a7acc; color: #6aaeff; }
 .tbtn.active { background: #0d2040; border-color: #3a7acc; color: #4a9eff; }
 
-.thumb-wrap { position: relative; }
+.thumb-wrap { position: relative; cursor: pointer; }
 .card-thumb {
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -213,7 +212,16 @@ body {
 .views-row { display: flex; align-items: baseline; gap: 5px; margin-bottom: 7px; }
 .views-count { font-size: 22px; font-weight: bold; color: #e8f0ff; font-variant-numeric: tabular-nums; }
 .views-unit  { font-size: 11px; color: #3a6a8a; }
-.growth-inline { font-size: 10px; color: #4a7a9a; margin-left: auto; white-space: nowrap; }
+.growth-inline { margin-left: auto; white-space: nowrap; }
+.growth-num  { font-size: 13px; color: #e8f0ff; font-variant-numeric: tabular-nums; }
+.growth-unit { font-size: 11px; color: #3a6a8a; }
+
+/* 再生数推移グラフ（カード内アコーディオン展開） */
+.spark-trigger { cursor: pointer; }
+.spark-trigger:hover { text-decoration: underline dotted #4a9eff; text-underline-offset: 3px; }
+.card-chart { height: 0; overflow: hidden; transition: height .22s ease; }
+.card-chart.open { height: 128px; }
+.card-chart .cchart { display: block; width: 100%; height: 120px; margin: 6px 0 2px; cursor: crosshair; }
 
 /* ── Achievement badge ─────────────────────────────── */
 .achieved-badge {
@@ -342,7 +350,7 @@ body {
   .card-title { font-size: 9px; min-height: 24px; margin-bottom: 4px; }
   .views-count { font-size: 14px; }
   .views-unit { font-size: 9px; }
-  .growth-inline { font-size: 9px; }
+  .growth-num { font-size: 11px; } .growth-unit { font-size: 9px; }
   .achieved-badge { padding: 3px 5px; margin-bottom: 3px; }
   .achieved-icon { font-size: 11px; }
   .achieved-text { font-size: 9px; }
@@ -1233,8 +1241,9 @@ function buildCard(a) {
     </div>` : '';
 
   const growthHtml = a.growthPerDay !== null
-    ? `+${fmtViews(Math.round(a.growthPerDay))}/日`
-    : 'データ蓄積中...';
+    ? (() => { const g = fmtViewsUnit(Math.round(a.growthPerDay));
+        return `<span class="growth-num">+${g.val}</span><span class="growth-unit">${g.unit}/日</span>`; })()
+    : '<span class="growth-unit">データ蓄積中...</span>';
 
   const externalBadgeHtml = a.isExternal
     ? '<div class="external-badge-row"><span class="external-badge">他チャンネル</span></div>'
@@ -1246,8 +1255,9 @@ function buildCard(a) {
 
   const card = document.createElement('div');
   card.className = `card ${cardCls}${isMarked ? ' marked-card' : ''}`;
+  // サムネイル部分のみYouTube遷移（数値部分はグラフ展開のトグルに使う）
   card.addEventListener('click', (e) => {
-    if (!e.target.closest('.card-btn'))
+    if (e.target.closest('.thumb-wrap'))
       window.open(`https://www.youtube.com/watch?v=${a.id}`, '_blank', 'noopener,noreferrer');
   });
   card.innerHTML = `
@@ -1261,10 +1271,11 @@ function buildCard(a) {
       <div class="card-title">${escHtml(a.title)}</div>
       ${externalBadgeHtml}
       <div class="views-row">
-        <span class="views-count">${val}</span>
-        <span class="views-unit">${unit}再生</span>
-        <span class="growth-inline">${growthHtml}</span>
+        <span class="views-count spark-trigger" data-vid="${a.id}">${val}</span>
+        <span class="views-unit spark-trigger" data-vid="${a.id}">${unit}再生</span>
+        <span class="growth-inline spark-trigger" data-vid="${a.id}">${growthHtml}</span>
       </div>
+      <div class="card-chart${openChartVids.has(a.id) ? ' open' : ''}"><canvas class="cchart" data-vid="${a.id}"></canvas></div>
       ${achievedHtml}
       ${milestoneHtml}
       <div class="card-bottom">
@@ -1275,6 +1286,238 @@ function buildCard(a) {
     </div>`;
   return card;
 }
+
+/* ─── カード内 再生数推移グラフ（クリックでアコーディオン展開・開いたカードのみ描画） ─── */
+let openChartVids = new Set();  // 展開中の動画id（renderMain再描画をまたいで維持）
+const cardCharts = (function initCardChart() {
+  const OL = 42, RAX = 44, OT = 16, OB = 16;  // 内側マージン（左=再生数軸/右=勢い軸/上=凡例帯/下=日付）
+
+  const fmtN   = n  => Math.round(n).toLocaleString('ja-JP');
+  const fmtDay = ts => { const d = new Date(ts); return (d.getMonth()+1) + '/' + d.getDate(); };
+  const fmtDT  = ts => { const d = new Date(ts);
+    return (d.getMonth()+1) + '/' + d.getDate() + ' ' +
+      String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); };
+  const fmtMan = n => Math.abs(n) >= 1e8
+    ? (n/1e8).toLocaleString('ja-JP', {maximumFractionDigits:2}) + '億'
+    : (n/1e4).toLocaleString('ja-JP', {maximumFractionDigits:1}) + '万';
+  function niceTicks(lo, hi, n) {
+    const span = hi - lo; if (span <= 0) return [lo];
+    const mag = Math.pow(10, Math.floor(Math.log10(span / n)));
+    const norm = (span / n) / mag, step = (norm >= 5 ? 5 : norm >= 2 ? 2 : 1) * mag;
+    const out = []; for (let v = Math.ceil(lo/step)*step; v <= hi + 1e-6; v += step) out.push(v);
+    return out;
+  }
+  function regress(pts) {
+    const n = pts.length; let sx=0, sy=0, sxx=0, sxy=0;
+    for (const p of pts) { const x = p.ts/86400000, y = p.views; sx+=x; sy+=y; sxx+=x*x; sxy+=x*y; }
+    const den = n*sxx - sx*sx; if (Math.abs(den) < 1e-9) return null;
+    const slope = (n*sxy - sx*sy) / den;
+    return { slope, intercept: (sy - slope*sx) / n };
+  }
+  // 勢い[views/日]：各点の直近24時間移動差分（点間ノイズを平滑化）
+  function velocitySeries(hist) {
+    const WIN = 24 * 3600 * 1000, out = [];
+    let j = 0;
+    for (let i = 0; i < hist.length; i++) {
+      while (hist[i].ts - hist[j].ts > WIN) j++;
+      const dt = (hist[i].ts - hist[j].ts) / 86400000;
+      if (dt >= 0.4) out.push({ ts: hist[i].ts, v: (hist[i].views - hist[j].views) / dt });
+    }
+    return out;
+  }
+
+  // canvas(.cchart)に描画。hoverTs指定でその位置にガイド線＋値
+  function draw(canvas, hoverTs) {
+    const vid = canvas.dataset.vid, v = store.videos[vid];
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    if (W < 20 || H < 20) return;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = W*dpr; canvas.height = H*dpr;
+    const ctx = canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,W,H);
+    if (!v || !v.history || v.history.length < 2) {
+      ctx.fillStyle = '#3a5068'; ctx.font = '10px "Segoe UI",sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('データ蓄積中…', W/2, H/2); return;
+    }
+    const h = v.history;
+    const xmin = h[0].ts, xmax = h[h.length-1].ts;
+    let ymin = Infinity, ymax = -Infinity;
+    for (const p of h) { if (p.views < ymin) ymin = p.views; if (p.views > ymax) ymax = p.views; }
+    if (ymax === ymin) ymax = ymin + 1;
+    const pad = (ymax - ymin) * 0.08; ymin -= pad; ymax += pad;
+    const plotL = OL, plotR = W - RAX;
+    const px = t  => plotL + (t - xmin) / (xmax - xmin) * (plotR - plotL);
+    const py = vv => H - OB - (vv - ymin) / (ymax - ymin) * (H - OT - OB);
+
+    // 勢い採用区間（直近72h、2点未満なら全体）＋近似直線
+    const win72 = xmax - 72 * 3600 * 1000;
+    let win = h.filter(p => p.ts >= win72);
+    if (win.length < 2) win = h;
+    const reg = regress(win);
+
+    // 採用区間のハイライト帯
+    const bandX0 = px(Math.max(win[0].ts, xmin));
+    ctx.fillStyle = 'rgba(255,157,60,.10)';
+    ctx.fillRect(bandX0, OT, plotR - bandX0, H - OT - OB);
+
+    // Y軸グリッド＋数値（左＝再生数）
+    ctx.font = '9px "Segoe UI",sans-serif';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (const val of niceTicks(ymin, ymax, 3)) {
+      if (val < ymin || val > ymax) continue;
+      const y = py(val);
+      ctx.strokeStyle = '#16283c'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(plotL, y); ctx.lineTo(plotR, y); ctx.stroke();
+      ctx.fillStyle = '#5a7185'; ctx.fillText(fmtMan(val), plotL - 4, y);
+    }
+    // X軸（日付）
+    ctx.fillStyle = '#4a6076'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    const spanD = (xmax - xmin) / 86400000, stepD = spanD > 14 ? 7 : spanD > 6 ? 2 : 1;
+    const s = new Date(xmin); s.setHours(0,0,0,0);
+    for (let ts = s.getTime(); ts <= xmax; ts += stepD*86400000) {
+      if (ts < xmin) continue; const x = px(ts);
+      ctx.strokeStyle = '#16283c'; ctx.beginPath(); ctx.moveTo(x, H-OB); ctx.lineTo(x, H-OB+3); ctx.stroke();
+      ctx.fillText(fmtDay(ts), x, H-OB+4);
+    }
+    // 塗り + 折れ線（再生数）
+    ctx.beginPath(); h.forEach((p,i) => { const x=px(p.ts), y=py(p.views); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+    ctx.lineTo(px(xmax), py(ymin)); ctx.lineTo(px(xmin), py(ymin)); ctx.closePath();
+    ctx.fillStyle = 'rgba(74,158,255,.13)'; ctx.fill();
+    ctx.beginPath(); h.forEach((p,i) => { const x=px(p.ts), y=py(p.views); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+    ctx.strokeStyle = '#4a9eff'; ctx.lineWidth = 1.8; ctx.lineJoin = 'round'; ctx.stroke();
+    // 近似直線（採用区間）
+    if (reg) {
+      ctx.strokeStyle = '#ff9d3c'; ctx.setLineDash([5,3]); ctx.lineWidth = 1.5;
+      const xa = win[0].ts, xb = xmax;
+      ctx.beginPath();
+      ctx.moveTo(px(xa), py(reg.slope*(xa/86400000) + reg.intercept));
+      ctx.lineTo(px(xb), py(reg.slope*(xb/86400000) + reg.intercept));
+      ctx.stroke(); ctx.setLineDash([]);
+    }
+    // 終点ドット＋取得日時（点の左側）
+    ctx.fillStyle = '#6ab0ff';
+    ctx.beginPath(); ctx.arc(px(xmax), py(h[h.length-1].views), 2.6, 0, 7); ctx.fill();
+    {
+      const lp = h[h.length-1], lx = px(lp.ts), ly = py(lp.views);
+      ctx.font = '8.5px "Segoe UI",sans-serif'; ctx.fillStyle = '#8fa6bd';
+      ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText(fmtDT(lp.ts), lx - 6, ly);
+    }
+
+    // 勢い（24h移動差分）を右軸で重ねる。案2: ピークを再生数ラインの margin px 下にアンカーして急騰局面の重なりを回避
+    const vel = velocitySeries(h);
+    let vy = null;
+    if (vel.length >= 2) {
+      let vmin = Infinity, vmax = -Infinity, tsPeak = vel[0].ts;
+      for (const p of vel) { if (p.v < vmin) vmin = p.v; if (p.v > vmax) { vmax = p.v; tsPeak = p.ts; } }
+      const vlo = Math.min(0, vmin), vPeak = (vmax > vlo ? vmax : vlo + 1);
+      const MARGIN = 14;  // 再生数ラインと勢いピークの縦間隔[px]（要調整）
+      // ピーク時刻での再生数ライン高さ（線形補間）
+      let viewsAtPeak;
+      if (tsPeak <= h[0].ts) viewsAtPeak = h[0].views;
+      else if (tsPeak >= h[h.length-1].ts) viewsAtPeak = h[h.length-1].views;
+      else { viewsAtPeak = h[h.length-1].views;
+        for (let i = 1; i < h.length; i++) if (h[i].ts >= tsPeak) {
+          const p0 = h[i-1], p1 = h[i], f = (tsPeak - p0.ts) / (p1.ts - p0.ts);
+          viewsAtPeak = p0.views + f * (p1.views - p0.views); break;
+        }
+      }
+      const plotBot = H - OB;
+      let yPeak = py(viewsAtPeak) + MARGIN;         // 再生数ラインの下に配置
+      yPeak = Math.min(yPeak, plotBot - 20);        // 最低20pxの振幅を確保
+      yPeak = Math.max(yPeak, OT + 2);              // 上端はみ出し防止
+      vy = vv => plotBot + (vv - vlo) / (vPeak - vlo) * (yPeak - plotBot);
+      // 右軸ラベル（勢い・万/日）
+      ctx.font = '9px "Segoe UI",sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#4f9e86';
+      for (const val of niceTicks(vlo, vPeak, 3)) {
+        if (val < vlo || val > vPeak) continue;
+        ctx.fillText(fmtMan(val) + '/日', plotR + 4, vy(val));
+      }
+      // 勢いライン
+      ctx.strokeStyle = '#3fd0a2'; ctx.lineWidth = 1.4; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      vel.forEach((p,i) => { const x = px(p.ts), y = vy(p.v); i ? ctx.lineTo(x,y) : ctx.moveTo(x,y); });
+      ctx.stroke();
+    }
+
+    // ホバー：クロスヘア＋点、上部に読み値
+    let readout = null;
+    if (hoverTs != null) {
+      let best = h[0], bd = Infinity;
+      for (const p of h) { const d = Math.abs(p.ts - hoverTs); if (d < bd) { bd = d; best = p; } }
+      const x = px(best.ts), y = py(best.views);
+      ctx.strokeStyle = 'rgba(220,230,242,.25)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, OT); ctx.lineTo(x, H-OB); ctx.stroke();
+      ctx.fillStyle = '#e2c04a'; ctx.beginPath(); ctx.arc(x, y, 3, 0, 7); ctx.fill();
+      let vBest = null, vbd = Infinity;
+      if (vy) for (const p of vel) { const d = Math.abs(p.ts - hoverTs); if (d < vbd) { vbd = d; vBest = p; } }
+      if (vBest && vy) { ctx.fillStyle = '#3fd0a2'; ctx.beginPath(); ctx.arc(px(vBest.ts), vy(vBest.v), 3, 0, 7); ctx.fill(); }
+      readout = fmtDT(best.ts) + ' ・ ' + fmtN(best.views) + '回'
+        + (vBest ? ' ・ 勢い ' + (vBest.v >= 0 ? '+' : '') + fmtMan(vBest.v) + '/日' : '');
+    }
+
+    // 上部ストリップ（凡例 or ホバー読み値）を最前面に
+    ctx.fillStyle = '#0e1826'; ctx.fillRect(0, 0, W, OT - 2);
+    const yc = (OT - 2) / 2;
+    if (readout) {
+      ctx.font = '9px "Segoe UI",sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#cde0f2'; ctx.fillText(readout, plotL, yc);
+    } else {
+      ctx.lineWidth = 2; ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.font = '8.5px "Segoe UI",sans-serif';
+      ctx.strokeStyle = '#4a9eff'; ctx.beginPath(); ctx.moveTo(plotL, yc); ctx.lineTo(plotL + 10, yc); ctx.stroke();
+      ctx.fillStyle = '#9fb3c8'; ctx.fillText('再生数', plotL + 13, yc);
+      ctx.strokeStyle = '#3fd0a2'; ctx.beginPath(); ctx.moveTo(plotL + 46, yc); ctx.lineTo(plotL + 56, yc); ctx.stroke();
+      ctx.fillStyle = '#9fb3c8'; ctx.fillText('勢い', plotL + 59, yc);
+    }
+  }
+
+  // 数値クリック/タップでそのカードのグラフを開閉トグル
+  document.addEventListener('click', e => {
+    const t = e.target.closest('.spark-trigger'); if (!t) return;
+    const card = t.closest('.card'); if (!card) return;
+    const panel = card.querySelector('.card-chart'); if (!panel) return;
+    const canvas = panel.querySelector('.cchart');
+    const vid = canvas.dataset.vid;
+    if (panel.classList.contains('open')) {
+      panel.classList.remove('open');
+      openChartVids.delete(vid);
+      // 閉じ切ったらバッキングを解放
+      setTimeout(() => { if (!panel.classList.contains('open')) { canvas.width = 0; canvas.height = 0; } }, 250);
+    } else {
+      panel.classList.add('open');
+      openChartVids.add(vid);
+      requestAnimationFrame(() => draw(canvas));
+    }
+  });
+
+  // 開いているグラフ上のホバーで日付・値を表示
+  document.addEventListener('mousemove', e => {
+    const cv = e.target.closest('.cchart'); if (!cv) return;
+    const panel = cv.closest('.card-chart'); if (!panel || !panel.classList.contains('open')) return;
+    const vv = store.videos[cv.dataset.vid]; if (!vv || !vv.history || vv.history.length < 2) return;
+    const h = vv.history, xmin = h[0].ts, xmax = h[h.length-1].ts;
+    const mx = e.clientX - cv.getBoundingClientRect().left;
+    const ts = xmin + (mx - OL) / (cv.clientWidth - OL - RAX) * (xmax - xmin);
+    draw(cv, ts);
+  });
+  document.addEventListener('mouseout', e => {
+    const cv = e.target.closest('.cchart'); if (!cv) return;
+    const panel = cv.closest('.card-chart'); if (panel && panel.classList.contains('open')) draw(cv);
+  });
+
+  // リサイズで開いているグラフを再描画
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => {
+    document.querySelectorAll('.card-chart.open .cchart').forEach(cv => draw(cv));
+  }, 150); });
+
+  // renderMain(カード再生成)後に、開いていたグラフを復元描画
+  function redrawOpen() {
+    document.querySelectorAll('.card-chart.open .cchart').forEach(cv => draw(cv));
+  }
+  return { redrawOpen };
+})();
 
 function renderMain() {
   const videoIds = Object.keys(store.videos);
@@ -1339,6 +1582,7 @@ function renderMain() {
   const content = document.getElementById('mainContent');
   content.innerHTML = '';
   content.appendChild(grid);
+  cardCharts.redrawOpen();  // 更新をまたいで開いていたグラフを復元
 
   if (store.lastUpdated) {
     document.getElementById('lastUpdated').textContent = fmtDatetime(store.lastUpdated) + ' ' + localTzLabel();
