@@ -84,7 +84,7 @@ def get_video_details(video_ids):
                 'title':       snippet['title'],
                 'channelId':   snippet['channelId'],
                 'thumbnail':   snippet['thumbnails'].get('medium', {}).get('url', ''),
-                'duration':    parse_duration(item['contentDetails']['duration']),
+                'duration':    parse_duration(item.get('contentDetails', {}).get('duration')),
                 'publishedAt': snippet['publishedAt'],
                 'views':       int(stats.get('viewCount', 0)),
             }
@@ -92,7 +92,9 @@ def get_video_details(video_ids):
 
 
 def parse_duration(iso):
-    """ISO 8601 duration (PT1H2M3S) → 秒数（int）"""
+    """ISO 8601 duration (PT1H2M3S) → 秒数（int）。配信予定枠等でdurationが無い場合は0"""
+    if not iso:
+        return 0
     m = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', iso)
     if not m:
         return 0
