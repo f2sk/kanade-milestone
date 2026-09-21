@@ -13,7 +13,8 @@ YouTube Data API v3 から再生数履歴を取得・更新するスクリプト
 動作:
     1. public_config.json からチャンネル設定・マーク・追加URLを読み込む
     2. YouTube API でチャンネル動画と追加動画の最新再生数を取得
-    3. 併せてチャンネル登録者数を取得（既存のchannels.listに相乗りするのでクォータ増加なし）
+    3. 併せてチャンネル登録者数と配信情報（liveBroadcastContent / liveStreamingDetails）を取得
+       いずれも既存の呼び出しにpartを相乗りさせるだけなのでクォータ増加なし
     4. public_data.json に履歴を追記（直近7日は30分刻み・7日超は2時間刻みで最大30日保持）して上書き保存
        登録者数は channel.subscriberHistory に変化点のみ記録（同じく最大30日保持）
 """
@@ -85,15 +86,18 @@ def get_video_ids_from_playlist(playlist_id):
 
 
 def get_video_details(video_ids):
+    """videos.list は part を増やしてもクォータ1unit/呼び出しのままなので
+    liveStreamingDetails を相乗りさせても追加コストはゼロ。"""
     result = {}
     for i in range(0, len(video_ids), 50):
         batch = video_ids[i:i + 50]
-        data = yt_get('videos', part='snippet,contentDetails,statistics', id=','.join(batch))
+        data = yt_get('videos', part='snippet,contentDetails,statistics,liveStreamingDetails',
+                      id=','.join(batch))
         for item in data.get('items', []):
             vid     = item['id']
             snippet = item['snippet']
             stats   = item.get('statistics', {})
-            result[vid] = {
+            info = {
                 'id':          vid,
                 'title':       snippet['title'],
                 'channelId':   snippet['channelId'],
@@ -102,7 +106,40 @@ def get_video_details(video_ids):
                 'publishedAt': snippet['publishedAt'],
                 'views':       int(stats.get('viewCount', 0)),
             }
+            live = build_live_info(snippet, item.get('liveStreamingDetails'))
+            if live:
+                info['live'] = live
+            result[vid] = info
     return result
+
+
+def build_live_info(snippet, lsd):
+    """配信・プレミア枠の情報をまとめる。通常のアップロード動画では None を返す。
+
+    liveBroadcastContent は none / upcoming / live のいずれか。
+    liveStreamingDetails はアーカイブにも残り actualStartTime/actualEndTime が取れるので、
+    実配信時間はリアルタイム性を要求されない（終了後に1回拾えば確定する）。
+    concurrentViewers は配信中のみ存在する。
+    """
+    state = snippet.get('liveBroadcastContent', 'none')
+    if state == 'none' and not lsd:
+        return None
+    lsd = lsd or {}
+    live = {'state': state}
+    for key, src in (('scheduled', 'scheduledStartTime'),
+                     ('start', 'actualStartTime'),
+                     ('end', 'actualEndTime')):
+        if lsd.get(src):
+            live[key] = lsd[src]
+    # 実配信時間（秒）。開始・終了が揃ったアーカイブでのみ確定する
+    if live.get('start') and live.get('end'):
+        started = datetime.fromisoformat(live['start'].replace('Z', '+00:00'))
+        ended   = datetime.fromisoformat(live['end'].replace('Z', '+00:00'))
+        live['seconds'] = int((ended - started).total_seconds())
+    ccv = lsd.get('concurrentViewers')
+    if ccv is not None:
+        live['ccv'] = int(ccv)
+    return live
 
 
 def parse_duration(iso):
@@ -199,6 +236,20 @@ def main():
             history.append({'ts': now_ms, 'views': views})
         # 7日より古い部分を2時間刻みへ間引く
         history = compact_history(history, fine_cutoff)
+
+        # 同接は配信中しか存在しないスナップショット値なので観測列として残す。
+        # 30分毎の観測では真のピークはまず捉えられないため ccvMaxSeen は下限値である点に注意。
+        live = info.get('live')
+        if live is not None:
+            ccv_hist = [c for c in (prev.get('live') or {}).get('ccvHistory', [])
+                        if c['ts'] >= cutoff]
+            ccv = live.pop('ccv', None)
+            if ccv is not None:
+                ccv_hist.append({'ts': now_ms, 'n': ccv})
+            if ccv_hist:
+                live['ccvHistory'] = ccv_hist
+                live['ccvMaxSeen'] = max(c['n'] for c in ccv_hist)
+
         existing_videos[vid] = {**info, 'history': history}
 
     # チャンネルから消えた動画はpinnedでなければ除外
