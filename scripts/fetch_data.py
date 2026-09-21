@@ -13,7 +13,9 @@ YouTube Data API v3 から再生数履歴を取得・更新するスクリプト
 動作:
     1. public_config.json からチャンネル設定・マーク・追加URLを読み込む
     2. YouTube API でチャンネル動画と追加動画の最新再生数を取得
-    3. public_data.json に履歴を追記（直近7日は30分刻み・7日超は2時間刻みで最大30日保持）して上書き保存
+    3. 併せてチャンネル登録者数を取得（既存のchannels.listに相乗りするのでクォータ増加なし）
+    4. public_data.json に履歴を追記（直近7日は30分刻み・7日超は2時間刻みで最大30日保持）して上書き保存
+       登録者数は channel.subscriberHistory に変化点のみ記録（同じく最大30日保持）
 """
 
 import json
@@ -49,9 +51,21 @@ def get_channel_id(handle):
     return items[0]['id']
 
 
-def get_uploads_playlist(channel_id):
-    data = yt_get('channels', part='contentDetails', id=channel_id)
-    return data['items'][0]['contentDetails']['relatedPlaylists']['uploads']
+def get_channel_info(channel_id):
+    """uploadsプレイリストIDと登録者数を1回のchannels.listで取得。
+
+    channels.list はpartを増やしてもクォータ1unitのままなので、
+    statistics を相乗りさせても追加コストはゼロ。
+    登録者数を非公開にしているチャンネルでは subscriberCount が欠けるため None を返す。
+    """
+    data = yt_get('channels', part='contentDetails,statistics', id=channel_id)
+    item = data['items'][0]
+    stats = item.get('statistics', {})
+    subs = stats.get('subscriberCount')
+    return {
+        'uploads': item['contentDetails']['relatedPlaylists']['uploads'],
+        'subscribers': int(subs) if subs is not None else None,
+    }
 
 
 def get_video_ids_from_playlist(playlist_id):
@@ -131,10 +145,12 @@ def main():
 
     # 既存データ読み込み
     existing_videos = {}
+    sub_history = []
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, encoding='utf-8') as f:
             existing = json.load(f)
         existing_videos = existing.get('videos', {})
+        sub_history = existing.get('channel', {}).get('subscriberHistory', [])
         if not own_channel_id:
             own_channel_id = existing.get('ownChannelId', '')
 
@@ -153,10 +169,13 @@ def main():
 
     # チャンネル動画一覧取得
     channel_video_ids = []
+    subscribers = None
     if own_channel_id:
-        uploads_pl = get_uploads_playlist(own_channel_id)
-        channel_video_ids = get_video_ids_from_playlist(uploads_pl)
+        ch_info = get_channel_info(own_channel_id)
+        subscribers = ch_info['subscribers']
+        channel_video_ids = get_video_ids_from_playlist(ch_info['uploads'])
         print(f'チャンネル動画: {len(channel_video_ids)} 件')
+        print(f'登録者数: {subscribers if subscribers is not None else "非公開"}')
 
     # 全取得対象（重複排除）
     all_ids = list(dict.fromkeys(channel_video_ids + pinned_ids))
@@ -186,9 +205,18 @@ def main():
     keep_ids = set(channel_video_ids) | set(pinned_ids)
     existing_videos = {k: v for k, v in existing_videos.items() if k in keep_ids}
 
+    # 登録者数履歴（変化点のみ記録）
+    # APIの subscriberCount は有効数字3桁に丸められるため値は階段状にしか動かない。
+    # 勢いはステップの発生時刻から推定することになるので、30分毎に観測しつつ
+    # 値が変わった時だけ点を打つ。同じ値が並ばないのでファイルはほとんど増えない。
+    sub_history = [h for h in sub_history if h['ts'] >= cutoff]
+    if subscribers is not None and (not sub_history or sub_history[-1]['subs'] != subscribers):
+        sub_history.append({'ts': now_ms, 'subs': subscribers})
+
     output = {
         'lastUpdated':  now_ms,
         'ownChannelId': own_channel_id,
+        'channel':      {'id': own_channel_id, 'subscriberHistory': sub_history},
         'videos':       existing_videos,
     }
 
@@ -196,7 +224,8 @@ def main():
         json.dump(output, f, ensure_ascii=False, separators=(',', ':'))
 
     ts = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-    print(f'完了: {len(existing_videos)} 件を {ts} に更新')
+    print(f'完了: {len(existing_videos)} 件を {ts} に更新'
+          f'（登録者履歴 {len(sub_history)} 点）')
 
 
 if __name__ == '__main__':
