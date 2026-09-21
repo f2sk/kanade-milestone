@@ -1115,6 +1115,24 @@ function updatePageTitle() {
   const title = ch ? `再生回数マイルストーン ー ${ch}` : '再生回数マイルストーン';
   document.title = title;
   document.getElementById('headerTitle').textContent = `🎵 ${title}`;
+  updateAttributionLink();
+}
+
+// YouTubeロゴのリンク先を、表示中のチャンネルに追従させる。
+// Branding Guidelines はロゴがYouTubeのコンテンツへ戻ることを求めており、
+// 本ツールはチャンネルを差し替えて使えるので固定URLにはできない。
+function updateAttributionLink() {
+  const a = document.getElementById('ytAttribution');
+  if (!a) return;
+  const id     = store.settings.ownChannelId || '';
+  const handle = (store.settings.channelHandle || '').replace(/^@/, '');
+  // チャンネルIDが最も確実。未解決ならハンドル、どちらも無ければYouTubeトップ
+  const url = id     ? `https://www.youtube.com/channel/${encodeURIComponent(id)}`
+            : handle ? `https://www.youtube.com/@${encodeURIComponent(handle)}`
+            :          'https://www.youtube.com/';
+  a.href = url;
+  a.setAttribute('aria-label',
+    handle ? `${handle} のチャンネルをYouTubeで開く` : 'YouTubeを開く');
 }
 
 function updateNotifBtn() {
@@ -1950,8 +1968,8 @@ setInterval(() => {
      ロゴを掲げ、クリックでYouTubeのコンテンツへ戻れるようにする必要がある。
      暗い背景なので白版(light)を使用。色の改変や一部を覆うことは禁止されている。 -->
 <div style="text-align:center;padding:22px 0 14px">
-  <a href="https://www.youtube.com/@OtonoseKanade" target="_blank" rel="noopener noreferrer"
-     aria-label="音乃瀬奏のチャンネルをYouTubeで開く"
+  <a id="ytAttribution" href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer"
+     aria-label="YouTubeを開く"
      style="display:inline-block;line-height:0">
     <img src="data:image/png;base64,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" alt="Developed with YouTube"
          style="height:46px;width:auto;display:block">
