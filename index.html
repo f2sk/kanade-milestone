@@ -1424,7 +1424,14 @@ const cardCharts = (function initCardChart() {
     }
 
     // 勢い（24h移動差分）を右軸で重ねる。案2: ピークを再生数ラインの margin px 下にアンカーして急騰局面の重なりを回避
-    const vel = velocitySeries(h);
+    // 保持期間（30日）で古いデータが捨てられると、左端の点は24時間前の点を失い、
+    // 残った短い区間で勢いが計算し直される。それまで正しく表示していた値が、
+    // 左端に来ただけで変わってしまうので、その区間（記録の最初の24時間）は描かない。
+    // 公開直後で24時間分が無いだけの動画は、記録開始≒公開なので従来どおり表示する。
+    const DAY_MS = 24 * 3600 * 1000;
+    const pubMs = Date.parse(v.publishedAt);
+    const truncated = !isNaN(pubMs) && pubMs < h[0].ts - DAY_MS;
+    const vel = velocitySeries(h).filter(p => !truncated || p.ts >= h[0].ts + DAY_MS);
     let vy = null;
     if (vel.length >= 2) {
       let vmin = Infinity, vmax = -Infinity, tsPeak = vel[0].ts;
