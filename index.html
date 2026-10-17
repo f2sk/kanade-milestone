@@ -31,6 +31,7 @@
   --surface: #0e1826;
   --surface-sunken: #0a1520;
   --surface-inset: #080f18;
+  --progress-track: #0a1520;
   --input-bg: #060d18;
   --btn-bg: #0d1e30;
   --accent-bg: #1d4f99;
@@ -134,7 +135,8 @@
   --bg-toolbar: #f8fafd;
   --surface: #ffffff;
   --surface-sunken: #e8eef6;
-  --surface-inset: #f1f5fa;
+  --surface-inset: #e4eefb;
+  --progress-track: #cddcf0;
   --input-bg: #ffffff;
   --btn-bg: #ffffff;
   --accent-bg: #2563d6;
@@ -518,7 +520,7 @@ body {
 .milestone-eta.normal  { color: var(--eta-normal); }
 .milestone-eta.unknown { color: var(--text-faint); }
 
-.progress-wrap { height: 3px; background: var(--surface-sunken); border-radius: 2px; margin-top: 5px; overflow: hidden; }
+.progress-wrap { height: 3px; background: var(--progress-track); border-radius: 2px; margin-top: 5px; overflow: hidden; }
 .progress-bar  { height: 100%; border-radius: 2px; transition: width .4s; }
 .progress-bar.approaching { background: linear-gradient(90deg, var(--progress-soon1), var(--orange)); }
 .progress-bar.normal      { background: linear-gradient(90deg, var(--progress1), var(--accent)); }
