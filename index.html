@@ -1456,9 +1456,16 @@ const cardCharts = (function initCardChart() {
       // 右軸ラベル（勢い・万/日）
       ctx.font = '9px "Segoe UI",sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       ctx.fillStyle = '#4f9e86';
-      for (const val of niceTicks(vlo, vPeak, 3)) {
+      // 公開直後の急騰では勢い軸が最低振幅（20px）まで潰れて目盛が重なるので、
+      // 上（ピーク側）から順に描き、直前のラベルと LABEL_GAP px 未満なら間引く
+      const LABEL_GAP = 11;
+      let lastY = -Infinity;
+      for (const val of niceTicks(vlo, vPeak, 3).reverse()) {
         if (val < vlo || val > vPeak) continue;
-        ctx.fillText(fmtMan(val) + '/日', plotR + 4, vy(val));
+        const y = vy(val);
+        if (y - lastY < LABEL_GAP) continue;
+        ctx.fillText(fmtMan(val) + '/日', plotR + 4, y);
+        lastY = y;
       }
       // 勢いライン
       ctx.strokeStyle = '#3fd0a2'; ctx.lineWidth = 1.4; ctx.lineJoin = 'round';
