@@ -13,19 +13,121 @@
   gtag('config', 'G-PF7HP9187J');
 </script>
 <style>
+:root {
+  --bg: #080d15;
+  --bg-header: #0c1520;
+  --bg-stats: #0a1018;
+  --bg-toolbar: #090e18;
+  --surface: #0e1826;
+  --surface-sunken: #0a1520;
+  --surface-inset: #080f18;
+  --input-bg: #060d18;
+  --btn-bg: #0d1e30;
+  --accent-bg: #1d4f99;
+  --overlay: #000a;
+  --err-bg: #1a0808;
+  --orange-bg: #3a2800;
+  --gold-bg: #3a2a00;
+  --gold-bg2: #2a1a00;
+  --ext-bg1: #0e0820;
+  --ext-bg2: #120e28;
+  --ext-soon-bg1: #180828;
+  --ext-soon-bg2: #14122e;
+  --ext-ach-bg1: #1a0e18;
+  --ext-ach-bg2: #1a1028;
+  --ext-ach1d-bg1: #12082a;
+  --ext-ach1d-bg2: #0e1028;
+  --ach-bg1: #1e1600;
+  --island-soon-bg1: #2b1c04;
+  --island-soon-bg2: #181208;
+  --island-ach-bg1: #302500;
+  --island-ach-bg2: #1a1505;
+  --hero-soon-bg: #2a1d05;
+  --hero-ach-bg: #2e2400;
+  --progress-soon1: #886600;
+  --orange: #ffaa00;
+  --progress1: #1a4a8a;
+  --accent: #4a9eff;
+  --border: #1a2a3a;
+  --border-subtle: #0f1e2e;
+  --border-input: #1a3a5a;
+  --border-control: #2a4a6a;
+  --border-section: #1a3050;
+  --accent-border: #2a7acc;
+  --accent-border-strong: #3a7acc;
+  --orange-border: #cc8800;
+  --orange-line: #ffaa0060;
+  --island-soon-line: #ffaa0055;
+  --hero-soon-line: #ffaa0040;
+  --gold: #ffd700;
+  --gold-dim: #cc9900;
+  --gold-line: #ffd70060;
+  --island-ach-line: #ffd70077;
+  --hero-ach-line: #ffd70050;
+  --gold-badge-line: #aa880060;
+  --mark-card-border: #4a3a00;
+  --ext-border: #9955ee;
+  --ext-badge-border: #2a5a9a;
+  --err-border: #4a1515;
+  --err: #cc4444;
+  --text: #c8d8e8;
+  --text-strong: #e8f0ff;
+  --text-title: #a8c8e0;
+  --text-secondary: #6a8aa8;
+  --text-muted: #3a6a8a;
+  --text-dim: #4a7a9a;
+  --text-label: #2a5a7a;
+  --text-faint: #2a4a6a;
+  --btn-text: #4a8aaa;
+  --tbtn-text: #8aaac8;
+  --tbtn-hover: #c8e0ff;
+  --accent-text: #fff;
+  --milestone: #6ab0ff;
+  --eta-normal: #3a7a9a;
+  --island-title: #f0e6d0;
+  --island-sub: #c8b890;
+  --hero-label: #d8c8a0;
+  --hero-soon: #ffb020;
+  --tweet-text: #4a7aaa;
+  --ext-badge-text: #5aabff;
+  --ext-glow: #9955ee30;
+  --orange-glow: #ffaa0045;
+  --gold-glow: #ffd70070;
+  --gold-inner: #ffd70012;
+  --gold-glow2: #ffd70045;
+  --load-err: #e06c75;
+  --chart-empty: #3a5068;
+  --chart-band: rgba(255,157,60,.10);
+  --chart-grid: #16283c;
+  --chart-axis: #5a7185;
+  --chart-date: #4a6076;
+  --chart-viewsFill: rgba(74,158,255,.13);
+  --chart-views: #4a9eff;
+  --chart-fit: #ff9d3c;
+  --chart-end: #6ab0ff;
+  --chart-endLabel: #8fa6bd;
+  --chart-velAxis: #4f9e86;
+  --chart-vel: #3fd0a2;
+  --chart-cross: rgba(220,230,242,.25);
+  --chart-hoverDot: #e2c04a;
+  --chart-strip: #0e1826;
+  --chart-readout: #cde0f2;
+  --chart-legend: #9fb3c8;
+}
+
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  background: #080d15;
-  color: #c8d8e8;
+  background: var(--bg);
+  color: var(--text);
   font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
   min-height: 100vh;
 }
 
 /* ── Header ──────────────────────────────────────── */
 .header {
-  background: #0c1520;
-  border-bottom: 1px solid #1a2a3a;
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border);
   padding: 10px 16px;
   display: flex;
   align-items: center;
@@ -35,15 +137,15 @@ body {
   top: 0;
   z-index: 10;
 }
-.header-title { font-size: 13px; font-weight: bold; letter-spacing: 1px; color: #4a9eff; white-space: nowrap; }
+.header-title { font-size: 13px; font-weight: bold; letter-spacing: 1px; color: var(--accent); white-space: nowrap; }
 .header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.last-updated { font-size: 11px; color: #6a8aa8; margin-left: auto; white-space: nowrap; }
+.last-updated { font-size: 11px; color: var(--text-secondary); margin-left: auto; white-space: nowrap; }
 
 .btn {
-  background: #0d1e30;
-  border: 1px solid #2a4a6a;
+  background: var(--btn-bg);
+  border: 1px solid var(--border-control);
   border-radius: 5px;
-  color: #4a8aaa;
+  color: var(--btn-text);
   font-family: inherit;
   font-size: 11px;
   padding: 4px 10px;
@@ -51,20 +153,20 @@ body {
   transition: all .15s;
   white-space: nowrap;
 }
-.btn:hover { border-color: #4a9eff; color: #4a9eff; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
 .btn:disabled { opacity: .4; cursor: not-allowed; }
-.btn.primary { border-color: #2a7acc; color: #4a9eff; }
-.btn.active  { border-color: #cc8800; color: #ffaa00; }
-.btn.danger { border-color: #4a1515; color: #cc4444; }
-.btn.danger:hover { border-color: #cc4444; }
+.btn.primary { border-color: var(--accent-border); color: var(--accent); }
+.btn.active  { border-color: var(--orange-border); color: var(--orange); }
+.btn.danger { border-color: var(--err-border); color: var(--err); }
+.btn.danger:hover { border-color: var(--err); }
 
 /* ── Stats bar ────────────────────────────────────── */
 .stats-bar {
   display: flex;
   gap: 16px;
   padding: 7px 16px;
-  background: #0a1018;
-  border-bottom: 1px solid #0f1e2e;
+  background: var(--bg-stats);
+  border-bottom: 1px solid var(--border-subtle);
   font-size: 11px;
 }
 .stat-item { display: flex; align-items: center; gap: 5px; }
@@ -75,10 +177,10 @@ body {
   font-size: 10px;
   font-weight: bold;
 }
-.stat-badge.approaching { background: #3a2800; color: #ffaa00; border: 1px solid #ffaa0060; }
-.stat-badge.achieved    { background: #3a2a00; color: #ffd700; border: 1px solid #ffd70060; }
-.stat-label { color: #3a6a8a; }
-.stat-count { color: #c8d8e8; font-weight: bold; }
+.stat-badge.approaching { background: var(--orange-bg); color: var(--orange); border: 1px solid var(--orange-line); }
+.stat-badge.achieved    { background: var(--gold-bg); color: var(--gold); border: 1px solid var(--gold-line); }
+.stat-label { color: var(--text-muted); }
+.stat-count { color: var(--text); font-weight: bold; }
 
 /* ── Card grid ────────────────────────────────────── */
 .grid {
@@ -89,8 +191,8 @@ body {
 }
 
 .card {
-  background: #0e1826;
-  border: 1px solid #1a2a3a;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
   position: relative;
@@ -101,37 +203,37 @@ body {
 }
 /* 外部チャンネル: 紫系。ステータスクラスとの組み合わせも明示定義 */
 .card.external {
-  border-color: #9955ee;
-  background: linear-gradient(160deg, #0e0820 0%, #120e28 60%);
-  box-shadow: 0 0 14px #9955ee30;
+  border-color: var(--ext-border);
+  background: linear-gradient(160deg, var(--ext-bg1) 0%, var(--ext-bg2) 60%);
+  box-shadow: 0 0 14px var(--ext-glow);
 }
 .card.external.approaching {
-  border: 2px solid #cc8800;
-  background: linear-gradient(160deg, #180828 0%, #14122e 60%);
-  box-shadow: 0 0 18px #ffaa0045;
+  border: 2px solid var(--orange-border);
+  background: linear-gradient(160deg, var(--ext-soon-bg1) 0%, var(--ext-soon-bg2) 60%);
+  box-shadow: 0 0 18px var(--orange-glow);
 }
 .card.external.achieved {
-  border: 2px solid #ffd700;
-  background: linear-gradient(160deg, #1a0e18 0%, #1a1028 55%);
-  box-shadow: 0 0 28px #ffd70070, inset 0 0 24px #ffd70012;
+  border: 2px solid var(--gold);
+  background: linear-gradient(160deg, var(--ext-ach-bg1) 0%, var(--ext-ach-bg2) 55%);
+  box-shadow: 0 0 28px var(--gold-glow), inset 0 0 24px var(--gold-inner);
 }
 .card.external.achieved-1d {
-  border-color: #cc9900;
-  background: linear-gradient(160deg, #12082a 0%, #0e1028 60%);
-  box-shadow: 0 0 16px #ffd70045;
+  border-color: var(--gold-dim);
+  background: linear-gradient(160deg, var(--ext-ach1d-bg1) 0%, var(--ext-ach1d-bg2) 60%);
+  box-shadow: 0 0 16px var(--gold-glow2);
 }
 .card.approaching {
-  border: 2px solid #cc8800;
-  box-shadow: 0 0 18px #ffaa0045;
+  border: 2px solid var(--orange-border);
+  box-shadow: 0 0 18px var(--orange-glow);
 }
 .card.achieved {
-  border: 2px solid #ffd700;
-  background: linear-gradient(160deg, #1e1600 0%, #0e1826 55%);
-  box-shadow: 0 0 28px #ffd70070, inset 0 0 24px #ffd70012;
+  border: 2px solid var(--gold);
+  background: linear-gradient(160deg, var(--ach-bg1) 0%, var(--surface) 55%);
+  box-shadow: 0 0 28px var(--gold-glow), inset 0 0 24px var(--gold-inner);
 }
 .card.achieved-1d {
-  border-color: #cc9900;
-  box-shadow: 0 0 16px #ffd70045;
+  border-color: var(--gold-dim);
+  box-shadow: 0 0 16px var(--gold-glow2);
 }
 
 
@@ -140,35 +242,35 @@ body {
   grid-column: 1 / -1;
   font-size: 10px;
   letter-spacing: 2px;
-  color: #3a6a8a;
+  color: var(--text-muted);
   padding: 8px 4px 4px;
-  border-bottom: 1px solid #1a3050;
+  border-bottom: 1px solid var(--border-section);
   margin-bottom: 2px;
 }
 .section-header:first-child { padding-top: 0; }
 
 /* ── 島（到達が近い順の「節目達成」「もうすぐ到達」） ─────────── */
 .island { margin: 12px 12px 4px; border-radius: 14px; padding: 12px 12px 2px; }
-.island.soon     { background: linear-gradient(160deg, #2b1c04 0%, #181208 70%); border: 1px solid #ffaa0055; }
-.island.achieved { background: linear-gradient(160deg, #302500 0%, #1a1505 70%); border: 1px solid #ffd70077; }
+.island.soon     { background: linear-gradient(160deg, var(--island-soon-bg1) 0%, var(--island-soon-bg2) 70%); border: 1px solid var(--island-soon-line); }
+.island.achieved { background: linear-gradient(160deg, var(--island-ach-bg1) 0%, var(--island-ach-bg2) 70%); border: 1px solid var(--island-ach-line); }
 .island .grid { padding: 10px 0 12px; }
 .island-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
 .island-eyebrow { font-size: 10px; font-weight: bold; letter-spacing: .15em; }
-.island.soon .island-eyebrow     { color: #ffaa00; }
-.island.achieved .island-eyebrow { color: #ffd700; }
-.island-title { font-size: 16px; font-weight: bold; color: #f0e6d0; margin-top: 2px; }
-.island-count { font-size: 12px; color: #c8b890; }
+.island.soon .island-eyebrow     { color: var(--orange); }
+.island.achieved .island-eyebrow { color: var(--gold); }
+.island-title { font-size: 16px; font-weight: bold; color: var(--island-title); margin-top: 2px; }
+.island-count { font-size: 12px; color: var(--island-sub); }
 
 /* 島のカードの主役表示（到達予想・達成） */
 .hero { border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
-.hero.soon     { background: #2a1d05; border: 1px solid #ffaa0040; }
-.hero.achieved { background: #2e2400; border: 1px solid #ffd70050; }
-.hero-label { font-size: 11px; color: #d8c8a0; }
+.hero.soon     { background: var(--hero-soon-bg); border: 1px solid var(--hero-soon-line); }
+.hero.achieved { background: var(--hero-ach-bg); border: 1px solid var(--hero-ach-line); }
+.hero-label { font-size: 11px; color: var(--hero-label); }
 .hero-main  { font-size: 24px; font-weight: bold; line-height: 1.25; font-variant-numeric: tabular-nums; }
-.hero.soon .hero-main     { color: #ffb020; }
-.hero.achieved .hero-main { color: #ffd700; }
+.hero.soon .hero-main     { color: var(--hero-soon); }
+.hero.achieved .hero-main { color: var(--gold); }
 .hero-unit { font-size: 13px; margin-left: 3px; }
-.hero-sub  { font-size: 11px; color: #c8b890; }
+.hero-sub  { font-size: 11px; color: var(--island-sub); }
 .views-row.compact .views-count { font-size: 17px; }
 .eta-date { font-weight: normal; }
 
@@ -178,17 +280,17 @@ body {
   align-items: center;
   gap: 8px 16px;
   padding: 8px 12px;
-  background: #090e18;
-  border-bottom: 1px solid #0f1e2e;
+  background: var(--bg-toolbar);
+  border-bottom: 1px solid var(--border-subtle);
   flex-wrap: wrap;
 }
 .toolbar-row { display: flex; align-items: center; gap: 6px; }
-.toolbar-label { font-size: 11px; color: #6a8aa8; white-space: nowrap; }
+.toolbar-label { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
 .tbtn {
-  background: #0a1520;
-  border: 1px solid #2a4a6a;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-control);
   border-radius: 6px;
-  color: #8aaac8;
+  color: var(--tbtn-text);
   font-family: inherit;
   font-size: 12px;
   padding: 5px 11px;
@@ -196,28 +298,28 @@ body {
   transition: all .15s;
   white-space: nowrap;
 }
-.tbtn:hover  { color: #c8e0ff; }
-.tbtn.active { background: #1d4f99; border-color: #3a7acc; color: #fff; }
+.tbtn:hover  { color: var(--tbtn-hover); }
+.tbtn.active { background: var(--accent-bg); border-color: var(--accent-border-strong); color: var(--accent-text); }
 /* 択一のボタン群は1つにつなげ、どれか1つを選ぶものだと分かるようにする */
-.seg { display: inline-flex; border: 1px solid #2a4a6a; border-radius: 6px; overflow: hidden; }
+.seg { display: inline-flex; border: 1px solid var(--border-control); border-radius: 6px; overflow: hidden; }
 .seg .tbtn { border: none; border-radius: 0; }
-.seg .tbtn + .tbtn { border-left: 1px solid #2a4a6a; }
+.seg .tbtn + .tbtn { border-left: 1px solid var(--border-control); }
 /* オン・オフの切り替え（★のみ） */
-.tbtn.toggle.active { background: #3a2a00; border-color: #ffd700; color: #ffd700; }
+.tbtn.toggle.active { background: var(--gold-bg); border-color: var(--gold); color: var(--gold); }
 .search-box {
   flex: 1;
   min-width: 160px;
   max-width: 280px;
-  background: #060d18;
-  border: 1px solid #2a4a6a;
+  background: var(--input-bg);
+  border: 1px solid var(--border-control);
   border-radius: 6px;
-  color: #c8d8e8;
+  color: var(--text);
   font-family: inherit;
   font-size: 13px;
   padding: 5px 10px;
 }
-.search-box:focus { outline: none; border-color: #4a9eff; }
-.empty-msg { grid-column: 1 / -1; text-align: center; padding: 40px 0; font-size: 12px; color: #6a8aa8; }
+.search-box:focus { outline: none; border-color: var(--accent); }
+.empty-msg { grid-column: 1 / -1; text-align: center; padding: 40px 0; font-size: 12px; color: var(--text-secondary); }
 
 .thumb-wrap { position: relative; cursor: pointer; }
 .card-thumb {
@@ -225,7 +327,7 @@ body {
   aspect-ratio: 16 / 9;
   object-fit: cover;
   display: block;
-  background: #0a1520;
+  background: var(--surface-sunken);
 }
 .thumb-duration {
   position: absolute;
@@ -245,7 +347,7 @@ body {
 .card-title {
   font-size: 11px;
   line-height: 1.45;
-  color: #a8c8e0;
+  color: var(--text-title);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -255,23 +357,23 @@ body {
 }
 
 .views-row { display: flex; align-items: baseline; gap: 5px; margin-bottom: 7px; }
-.views-count { font-size: 22px; font-weight: bold; color: #e8f0ff; font-variant-numeric: tabular-nums; }
-.views-unit  { font-size: 11px; color: #3a6a8a; }
+.views-count { font-size: 22px; font-weight: bold; color: var(--text-strong); font-variant-numeric: tabular-nums; }
+.views-unit  { font-size: 11px; color: var(--text-muted); }
 .growth-inline { margin-left: auto; white-space: nowrap; }
-.growth-num  { font-size: 13px; color: #e8f0ff; font-variant-numeric: tabular-nums; }
-.growth-unit { font-size: 11px; color: #3a6a8a; }
+.growth-num  { font-size: 13px; color: var(--text-strong); font-variant-numeric: tabular-nums; }
+.growth-unit { font-size: 11px; color: var(--text-muted); }
 
 /* 再生数推移グラフ（カード内アコーディオン展開） */
 .spark-trigger { cursor: pointer; }
-.spark-trigger:hover { text-decoration: underline dotted #4a9eff; text-underline-offset: 3px; }
+.spark-trigger:hover { text-decoration: underline dotted var(--accent); text-underline-offset: 3px; }
 .card-chart { height: 0; overflow: hidden; transition: height .22s ease; }
 .card-chart.open { height: 128px; }
 .card-chart .cchart { display: block; width: 100%; height: 120px; margin: 6px 0 2px; cursor: crosshair; }
 
 /* ── Achievement badge ─────────────────────────────── */
 .achieved-badge {
-  background: linear-gradient(135deg, #2a1a00, #3a2a00);
-  border: 1px solid #aa880060;
+  background: linear-gradient(135deg, var(--gold-bg2), var(--gold-bg));
+  border: 1px solid var(--gold-badge-line);
   border-radius: 6px;
   padding: 5px 9px;
   display: flex;
@@ -280,42 +382,42 @@ body {
   margin-bottom: 6px;
 }
 .achieved-icon { font-size: 14px; }
-.achieved-text { font-size: 11px; color: #ffd700; font-weight: bold; }
+.achieved-text { font-size: 11px; color: var(--gold); font-weight: bold; }
 
 /* ── Milestone row ─────────────────────────────────── */
 .milestone-row {
-  background: #080f18;
+  background: var(--surface-inset);
   border-radius: 6px;
   padding: 6px 9px;
   margin-bottom: 5px;
 }
-.milestone-label { font-size: 9px; color: #2a5a7a; letter-spacing: 1px; margin-bottom: 3px; }
+.milestone-label { font-size: 9px; color: var(--text-label); letter-spacing: 1px; margin-bottom: 3px; }
 .milestone-next  { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.milestone-target    { font-size: 14px; font-weight: bold; color: #6ab0ff; }
-.milestone-remaining { font-size: 10px; color: #4a7a9a; }
+.milestone-target    { font-size: 14px; font-weight: bold; color: var(--milestone); }
+.milestone-remaining { font-size: 10px; color: var(--text-dim); }
 .milestone-eta { font-size: 11px; font-weight: bold; white-space: nowrap; }
-.milestone-eta.soon    { color: #ffaa00; }
-.milestone-eta.normal  { color: #3a7a9a; }
-.milestone-eta.unknown { color: #2a4a6a; }
+.milestone-eta.soon    { color: var(--orange); }
+.milestone-eta.normal  { color: var(--eta-normal); }
+.milestone-eta.unknown { color: var(--text-faint); }
 
-.progress-wrap { height: 3px; background: #0a1520; border-radius: 2px; margin-top: 5px; overflow: hidden; }
+.progress-wrap { height: 3px; background: var(--surface-sunken); border-radius: 2px; margin-top: 5px; overflow: hidden; }
 .progress-bar  { height: 100%; border-radius: 2px; transition: width .4s; }
-.progress-bar.approaching { background: linear-gradient(90deg, #886600, #ffaa00); }
-.progress-bar.normal      { background: linear-gradient(90deg, #1a4a8a, #4a9eff); }
+.progress-bar.approaching { background: linear-gradient(90deg, var(--progress-soon1), var(--orange)); }
+.progress-bar.normal      { background: linear-gradient(90deg, var(--progress1), var(--accent)); }
 
 .card-bottom { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 5px; }
-.publish-row { font-size: 9px; color: #2a4a6a; }
+.publish-row { font-size: 9px; color: var(--text-faint); }
 
 /* ── Status messages ───────────────────────────────── */
-.status-msg { text-align: center; padding: 60px 20px; font-size: 13px; color: #3a6a8a; }
+.status-msg { text-align: center; padding: 60px 20px; font-size: 13px; color: var(--text-muted); }
 .error-msg {
-  background: #1a0808;
-  border: 1px solid #4a1515;
+  background: var(--err-bg);
+  border: 1px solid var(--err-border);
   border-radius: 8px;
   padding: 12px 16px;
   margin: 12px;
   font-size: 12px;
-  color: #cc4444;
+  color: var(--err);
   line-height: 1.6;
 }
 
@@ -329,8 +431,8 @@ body {
   padding: 24px;
 }
 .setup-box {
-  background: #0e1826;
-  border: 1px solid #1a2a3a;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 24px;
   width: 100%;
@@ -339,28 +441,28 @@ body {
   flex-direction: column;
   gap: 14px;
 }
-.setup-title { font-size: 15px; font-weight: bold; color: #4a9eff; }
-.setup-desc  { font-size: 11px; color: #4a7a9a; line-height: 1.7; }
+.setup-title { font-size: 15px; font-weight: bold; color: var(--accent); }
+.setup-desc  { font-size: 11px; color: var(--text-dim); line-height: 1.7; }
 
-.field-label { font-size: 11px; color: #4a7a9a; margin-bottom: 4px; }
+.field-label { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
 .field-input {
   width: 100%;
-  background: #060d18;
-  border: 1px solid #1a3a5a;
+  background: var(--input-bg);
+  border: 1px solid var(--border-input);
   border-radius: 5px;
-  color: #c8d8e8;
+  color: var(--text);
   font-size: 12px;
   padding: 8px 10px;
   font-family: 'Courier New', monospace;
 }
-.field-input:focus { outline: none; border-color: #4a9eff; }
+.field-input:focus { outline: none; border-color: var(--accent); }
 
 /* ── Settings modal ────────────────────────────────── */
 .modal-overlay {
   display: none;
   position: fixed;
   inset: 0;
-  background: #000a;
+  background: var(--overlay);
   z-index: 100;
   align-items: center;
   justify-content: center;
@@ -368,8 +470,8 @@ body {
 }
 .modal-overlay.open { display: flex; }
 .modal-box {
-  background: #0e1826;
-  border: 1px solid #1a3a5a;
+  background: var(--surface);
+  border: 1px solid var(--border-input);
   border-radius: 12px;
   padding: 20px;
   width: 100%;
@@ -380,7 +482,7 @@ body {
   flex-direction: column;
   gap: 14px;
 }
-.modal-title  { font-size: 13px; font-weight: bold; color: #4a9eff; letter-spacing: 1px; }
+.modal-title  { font-size: 13px; font-weight: bold; color: var(--accent); letter-spacing: 1px; }
 .modal-footer { display: flex; gap: 8px; justify-content: flex-end; }
 
 /* ── Responsive ─────────────────────────────────────── */
@@ -414,7 +516,7 @@ body {
   .achieved-text { font-size: 9px; }
   .milestone-row { padding: 3px 5px; margin-bottom: 3px; }
   .milestone-label { font-size: 0; letter-spacing: 0; margin-bottom: 2px; }
-  .milestone-label::before { content: 'NEXT'; font-size: 8px; letter-spacing: 1px; color: #2a5a7a; }
+  .milestone-label::before { content: 'NEXT'; font-size: 8px; letter-spacing: 1px; color: var(--text-label); }
   .milestone-next { gap: 3px; }
   .milestone-target { font-size: 12px; }
   .milestone-remaining { display: none; }
@@ -453,7 +555,7 @@ body {
 }
 .mark-btn:hover       { border-color: #ffd700; color: #ffd700; }
 .mark-btn.marked      { color: #ffd700; border-color: #ffd70080; }
-.card.marked-card     { border-color: #4a3a00; }
+.card.marked-card     { border-color: var(--mark-card-border); }
 
 /* ── カード下部アクション行 ─────────────────────────────── */
 .card-footer {
@@ -464,9 +566,9 @@ body {
 }
 .tweet-btn {
   background: transparent;
-  border: 1px solid #1a3a5a;
+  border: 1px solid var(--border-input);
   border-radius: 4px;
-  color: #4a7aaa;
+  color: var(--tweet-text);
   font-size: 10px;
   font-weight: bold;
   padding: 2px 7px;
@@ -474,44 +576,44 @@ body {
   white-space: nowrap;
   transition: all .15s;
 }
-.tweet-btn:hover { border-color: #4a9eff; color: #4a9eff; }
+.tweet-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ── 外部チャンネルバッジ ─────────────────────────────── */
 .external-badge-row { margin-bottom: 4px; }
 .external-badge {
   display: inline-block;
   font-size: 9px;
-  color: #5aabff;
-  border: 1px solid #2a5a9a;
+  color: var(--ext-badge-text);
+  border: 1px solid var(--ext-badge-border);
   border-radius: 3px;
   padding: 0 5px;
   line-height: 16px;
 }
 
 /* ── 設定モーダル URL追加・ピン留めリスト ────────────── */
-.field-divider { border: none; border-top: 1px solid #1a3a5a; margin: 2px 0; }
+.field-divider { border: none; border-top: 1px solid var(--border-input); margin: 2px 0; }
 .field-textarea {
   width: 100%;
-  background: #060d18;
-  border: 1px solid #1a3a5a;
+  background: var(--input-bg);
+  border: 1px solid var(--border-input);
   border-radius: 5px;
-  color: #c8d8e8;
+  color: var(--text);
   font-size: 11px;
   padding: 8px 10px;
   font-family: 'Courier New', monospace;
   resize: vertical;
   min-height: 70px;
 }
-.field-textarea:focus { outline: none; border-color: #4a9eff; }
+.field-textarea:focus { outline: none; border-color: var(--accent); }
 .pinned-list { display: flex; flex-direction: column; gap: 2px; max-height: 130px; overflow-y: auto; }
 .pinned-item {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 3px 0;
-  border-bottom: 1px solid #0f1e2e;
+  border-bottom: 1px solid var(--border-subtle);
 }
-.pinned-title { font-size: 10px; color: #4a7a9a; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pinned-title { font-size: 10px; color: var(--text-dim); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -820,6 +922,16 @@ function showLastUpdated() {
   const isJst = -new Date().getTimezoneOffset() === 540;
   document.getElementById('lastUpdated').textContent =
     `最終更新 ${fmtDatetime(store.lastUpdated)}${isJst ? '' : ' (' + localTzLabel() + ')'}`;
+}
+
+// グラフ（canvas）の色を CSS 変数 --chart-* から読む。テーマ切り替えに追従させるため描画のたびに読む
+const CHART_COLOR_KEYS = ['empty', 'band', 'grid', 'axis', 'date', 'viewsFill', 'views', 'fit', 'end',
+  'endLabel', 'velAxis', 'vel', 'cross', 'hoverDot', 'strip', 'readout', 'legend'];
+function chartColors() {
+  const cs = getComputedStyle(document.documentElement);
+  const c = {};
+  for (const k of CHART_COLOR_KEYS) c[k] = cs.getPropertyValue('--chart-' + k).trim();
+  return c;
 }
 
 // タイトル検索用の正規化。全角半角・大文字小文字・カタカナひらがな・空白記号の揺れを吸収する
@@ -1479,6 +1591,7 @@ const cardCharts = (function initCardChart() {
 
   // canvas(.cchart)に描画。hoverTs指定でその位置にガイド線＋値
   function draw(canvas, hoverTs) {
+    const C = chartColors();
     const vid = canvas.dataset.vid, v = store.videos[vid];
     const W = canvas.clientWidth, H = canvas.clientHeight;
     if (W < 20 || H < 20) return;
@@ -1487,7 +1600,7 @@ const cardCharts = (function initCardChart() {
     const ctx = canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
     ctx.clearRect(0,0,W,H);
     if (!v || !v.history || v.history.length < 2) {
-      ctx.fillStyle = '#3a5068'; ctx.font = '10px "Segoe UI",sans-serif';
+      ctx.fillStyle = C.empty; ctx.font = '10px "Segoe UI",sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('データ蓄積中…', W/2, H/2); return;
     }
@@ -1509,7 +1622,7 @@ const cardCharts = (function initCardChart() {
 
     // 採用区間のハイライト帯
     const bandX0 = px(Math.max(win[0].ts, xmin));
-    ctx.fillStyle = 'rgba(255,157,60,.10)';
+    ctx.fillStyle = C.band;
     ctx.fillRect(bandX0, OT, plotR - bandX0, H - OT - OB);
 
     // Y軸グリッド＋数値（左＝再生数）
@@ -1518,28 +1631,28 @@ const cardCharts = (function initCardChart() {
     for (const val of niceTicks(ymin, ymax, 3)) {
       if (val < ymin || val > ymax) continue;
       const y = py(val);
-      ctx.strokeStyle = '#16283c'; ctx.lineWidth = 1;
+      ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(plotL, y); ctx.lineTo(plotR, y); ctx.stroke();
-      ctx.fillStyle = '#5a7185'; ctx.fillText(fmtMan(val), plotL - 4, y);
+      ctx.fillStyle = C.axis; ctx.fillText(fmtMan(val), plotL - 4, y);
     }
     // X軸（日付）
-    ctx.fillStyle = '#4a6076'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillStyle = C.date; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     const spanD = (xmax - xmin) / 86400000, stepD = spanD > 14 ? 7 : spanD > 6 ? 2 : 1;
     const s = new Date(xmin); s.setHours(0,0,0,0);
     for (let ts = s.getTime(); ts <= xmax; ts += stepD*86400000) {
       if (ts < xmin) continue; const x = px(ts);
-      ctx.strokeStyle = '#16283c'; ctx.beginPath(); ctx.moveTo(x, H-OB); ctx.lineTo(x, H-OB+3); ctx.stroke();
+      ctx.strokeStyle = C.grid; ctx.beginPath(); ctx.moveTo(x, H-OB); ctx.lineTo(x, H-OB+3); ctx.stroke();
       ctx.fillText(fmtDay(ts), x, H-OB+4);
     }
     // 塗り + 折れ線（再生数）
     ctx.beginPath(); h.forEach((p,i) => { const x=px(p.ts), y=py(p.views); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
     ctx.lineTo(px(xmax), py(ymin)); ctx.lineTo(px(xmin), py(ymin)); ctx.closePath();
-    ctx.fillStyle = 'rgba(74,158,255,.13)'; ctx.fill();
+    ctx.fillStyle = C.viewsFill; ctx.fill();
     ctx.beginPath(); h.forEach((p,i) => { const x=px(p.ts), y=py(p.views); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
-    ctx.strokeStyle = '#4a9eff'; ctx.lineWidth = 1.8; ctx.lineJoin = 'round'; ctx.stroke();
+    ctx.strokeStyle = C.views; ctx.lineWidth = 1.8; ctx.lineJoin = 'round'; ctx.stroke();
     // 近似直線（採用区間）
     if (reg) {
-      ctx.strokeStyle = '#ff9d3c'; ctx.setLineDash([5,3]); ctx.lineWidth = 1.5;
+      ctx.strokeStyle = C.fit; ctx.setLineDash([5,3]); ctx.lineWidth = 1.5;
       const xa = win[0].ts, xb = xmax;
       ctx.beginPath();
       ctx.moveTo(px(xa), py(reg.slope*(xa/86400000) + reg.intercept));
@@ -1547,11 +1660,11 @@ const cardCharts = (function initCardChart() {
       ctx.stroke(); ctx.setLineDash([]);
     }
     // 終点ドット＋取得日時（点の左側）
-    ctx.fillStyle = '#6ab0ff';
+    ctx.fillStyle = C.end;
     ctx.beginPath(); ctx.arc(px(xmax), py(h[h.length-1].views), 2.6, 0, 7); ctx.fill();
     {
       const lp = h[h.length-1], lx = px(lp.ts), ly = py(lp.views);
-      ctx.font = '8.5px "Segoe UI",sans-serif'; ctx.fillStyle = '#8fa6bd';
+      ctx.font = '8.5px "Segoe UI",sans-serif'; ctx.fillStyle = C.endLabel;
       ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
       ctx.fillText(fmtDT(lp.ts), lx - 6, ly);
     }
@@ -1590,7 +1703,7 @@ const cardCharts = (function initCardChart() {
       vy = vv => plotBot + (vv - vlo) / (vPeak - vlo) * (yPeak - plotBot);
       // 右軸ラベル（勢い・万/日）
       ctx.font = '9px "Segoe UI",sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#4f9e86';
+      ctx.fillStyle = C.velAxis;
       // 目盛が詰まると重なるので、下端（0）から順に描き、直前のラベルと LABEL_GAP px 未満なら間引く。
       // 下端の0を必ず残して、軸の基準が読めるようにする
       const LABEL_GAP = 11;
@@ -1605,7 +1718,7 @@ const cardCharts = (function initCardChart() {
         lastY = y;
       }
       // 勢いライン
-      ctx.strokeStyle = '#3fd0a2'; ctx.lineWidth = 1.4; ctx.lineJoin = 'round';
+      ctx.strokeStyle = C.vel; ctx.lineWidth = 1.4; ctx.lineJoin = 'round';
       ctx.beginPath();
       vel.forEach((p,i) => { const x = px(p.ts), y = vy(p.v); i ? ctx.lineTo(x,y) : ctx.moveTo(x,y); });
       ctx.stroke();
@@ -1617,28 +1730,28 @@ const cardCharts = (function initCardChart() {
       let best = h[0], bd = Infinity;
       for (const p of h) { const d = Math.abs(p.ts - hoverTs); if (d < bd) { bd = d; best = p; } }
       const x = px(best.ts), y = py(best.views);
-      ctx.strokeStyle = 'rgba(220,230,242,.25)'; ctx.lineWidth = 1;
+      ctx.strokeStyle = C.cross; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(x, OT); ctx.lineTo(x, H-OB); ctx.stroke();
-      ctx.fillStyle = '#e2c04a'; ctx.beginPath(); ctx.arc(x, y, 3, 0, 7); ctx.fill();
+      ctx.fillStyle = C.hoverDot; ctx.beginPath(); ctx.arc(x, y, 3, 0, 7); ctx.fill();
       let vBest = null, vbd = Infinity;
       if (vy) for (const p of vel) { const d = Math.abs(p.ts - hoverTs); if (d < vbd) { vbd = d; vBest = p; } }
-      if (vBest && vy) { ctx.fillStyle = '#3fd0a2'; ctx.beginPath(); ctx.arc(px(vBest.ts), vy(vBest.v), 3, 0, 7); ctx.fill(); }
+      if (vBest && vy) { ctx.fillStyle = C.vel; ctx.beginPath(); ctx.arc(px(vBest.ts), vy(vBest.v), 3, 0, 7); ctx.fill(); }
       readout = fmtDT(best.ts) + ' ・ ' + fmtN(best.views) + '回'
         + (vBest ? ' ・ 勢い ' + (vBest.v >= 0 ? '+' : '') + fmtMan(vBest.v) + '/日' : '');
     }
 
     // 上部ストリップ（凡例 or ホバー読み値）を最前面に
-    ctx.fillStyle = '#0e1826'; ctx.fillRect(0, 0, W, OT - 2);
+    ctx.fillStyle = C.strip; ctx.fillRect(0, 0, W, OT - 2);
     const yc = (OT - 2) / 2;
     if (readout) {
       ctx.font = '9px "Segoe UI",sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#cde0f2'; ctx.fillText(readout, plotL, yc);
+      ctx.fillStyle = C.readout; ctx.fillText(readout, plotL, yc);
     } else {
       ctx.lineWidth = 2; ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.font = '8.5px "Segoe UI",sans-serif';
-      ctx.strokeStyle = '#4a9eff'; ctx.beginPath(); ctx.moveTo(plotL, yc); ctx.lineTo(plotL + 10, yc); ctx.stroke();
-      ctx.fillStyle = '#9fb3c8'; ctx.fillText('再生数', plotL + 13, yc);
-      ctx.strokeStyle = '#3fd0a2'; ctx.beginPath(); ctx.moveTo(plotL + 46, yc); ctx.lineTo(plotL + 56, yc); ctx.stroke();
-      ctx.fillStyle = '#9fb3c8'; ctx.fillText('勢い', plotL + 59, yc);
+      ctx.strokeStyle = C.views; ctx.beginPath(); ctx.moveTo(plotL, yc); ctx.lineTo(plotL + 10, yc); ctx.stroke();
+      ctx.fillStyle = C.legend; ctx.fillText('再生数', plotL + 13, yc);
+      ctx.strokeStyle = C.vel; ctx.beginPath(); ctx.moveTo(plotL + 46, yc); ctx.lineTo(plotL + 56, yc); ctx.stroke();
+      ctx.fillStyle = C.legend; ctx.fillText('勢い', plotL + 59, yc);
     }
   }
 
@@ -2101,7 +2214,7 @@ if (IS_PUBLIC_MODE) {
     renderMain();
   }).catch(err => {
     document.getElementById('mainContent').innerHTML =
-      `<div style="color:#e06c75;padding:40px;text-align:center">データ読み込みエラー: ${escHtml(err.message)}</div>`;
+      `<div style="color:var(--load-err);padding:40px;text-align:center">データ読み込みエラー: ${escHtml(err.message)}</div>`;
   });
 } else if (!store.settings.apiKey) {
   document.getElementById('mainContent').innerHTML = `
@@ -2153,11 +2266,11 @@ setInterval(() => {
     <img src="data:image/png;base64,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" alt="Developed with YouTube"
          style="height:46px;width:auto;display:block">
   </a>
-  <div style="font-size:10px;color:#2a4a6a;margin-top:10px">
+  <div style="font-size:10px;color:var(--text-faint);margin-top:10px">
     データ出典: YouTube Data API v3
     <span style="margin:0 6px">·</span>
     <a href="https://github.com/f2sk/kanade-milestone" target="_blank" rel="noopener noreferrer"
-      style="color:#4a7a9a;text-decoration:none">GitHub</a>
+      style="color:var(--text-dim);text-decoration:none">GitHub</a>
   </div>
 </div>
 </body>
