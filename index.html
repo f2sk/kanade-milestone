@@ -1458,14 +1458,14 @@ const cardCharts = (function initCardChart() {
       // 右軸ラベル（勢い・万/日）
       ctx.font = '9px "Segoe UI",sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       ctx.fillStyle = '#4f9e86';
-      // 公開直後の急騰では勢い軸が最低振幅（20px）まで潰れて目盛が重なるので、
-      // 上（ピーク側）から順に描き、直前のラベルと LABEL_GAP px 未満なら間引く
+      // 目盛が詰まると重なるので、下端（0）から順に描き、直前のラベルと LABEL_GAP px 未満なら間引く。
+      // 下端の0を必ず残して、軸の基準が読めるようにする
       const LABEL_GAP = 11;
-      let lastY = -Infinity;
-      for (const val of niceTicks(vlo, vPeak, 3).reverse()) {
+      let lastY = Infinity;
+      for (const val of niceTicks(vlo, vPeak, 3)) {
         if (val < vlo || val > vPeak) continue;
         const y = vy(val);
-        if (y - lastY < LABEL_GAP) continue;
+        if (lastY - y < LABEL_GAP) continue;
         // 1万/日未満の動画は万単位だと目盛が全部「0.1万」に丸まって区別できないので、実数で出す
         ctx.fillText((vPeak < 1e4 ? fmtN(val) : fmtMan(val)) + '/日', plotR + 4, y);
         ctx.fillRect(plotR - 3, Math.round(y), 4, 1);  // ラベルが指す高さを示す目盛線
