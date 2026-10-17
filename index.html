@@ -1450,7 +1450,9 @@ const cardCharts = (function initCardChart() {
       }
       const plotBot = H - OB;
       let yPeak = py(viewsAtPeak) + MARGIN;         // 再生数ラインの下に配置
-      yPeak = Math.min(yPeak, plotBot - 20);        // 最低20pxの振幅を確保
+      // 公開直後の急騰ではピーク時の再生数ラインが底に近く、アンカーすると勢い軸が潰れて読めない。
+      // 右軸として読めるよう、プロット高さの半分を最低振幅として確保する（この場合は線が交差しうる）
+      yPeak = Math.min(yPeak, plotBot - (plotBot - OT) * 0.5);
       yPeak = Math.max(yPeak, OT + 2);              // 上端はみ出し防止
       vy = vv => plotBot + (vv - vlo) / (vPeak - vlo) * (yPeak - plotBot);
       // 右軸ラベル（勢い・万/日）
@@ -1465,6 +1467,7 @@ const cardCharts = (function initCardChart() {
         const y = vy(val);
         if (y - lastY < LABEL_GAP) continue;
         ctx.fillText(fmtMan(val) + '/日', plotR + 4, y);
+        ctx.fillRect(plotR - 3, Math.round(y), 4, 1);  // ラベルが指す高さを示す目盛線
         lastY = y;
       }
       // 勢いライン
