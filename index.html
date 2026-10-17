@@ -401,7 +401,8 @@ body {
 .card.wide .card-title { font-size: 13px; }
 .card.wide .wide-body { padding: 10px 12px; }
 .wide-stats {
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
+  /* 列幅は中身に合わせる（到達予想は「10/20 06:09頃」のように長くなるので等分だと収まらない） */
+  display: grid; grid-template-columns: repeat(3, auto); justify-content: space-between; gap: 8px;
   background: var(--hero-soon-bg); border: 1px solid var(--hero-soon-line); border-radius: 8px; padding: 8px 12px;
 }
 .wstat-label { font-size: 11px; color: var(--hero-label); }
@@ -532,8 +533,8 @@ body {
 }
 .milestone-label { font-size: 9px; color: var(--text-label); letter-spacing: 1px; margin-bottom: 3px; }
 .milestone-next  { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.milestone-target    { font-size: 14px; font-weight: bold; color: var(--milestone); }
-.milestone-remaining { font-size: 10px; color: var(--text-dim); }
+.milestone-target    { font-size: 14px; font-weight: bold; color: var(--milestone); white-space: nowrap; }
+.milestone-remaining { font-size: 10px; color: var(--text-dim); white-space: nowrap; }
 .milestone-eta { font-size: 11px; font-weight: bold; white-space: nowrap; }
 .milestone-eta.soon    { color: var(--orange); }
 .milestone-eta.normal  { color: var(--eta-normal); }
@@ -1859,12 +1860,16 @@ const cardCharts = (function initCardChart() {
     ctx.strokeStyle = C.views; ctx.lineWidth = 1.8; ctx.lineJoin = 'round'; ctx.stroke();
     // 近似直線（採用区間）
     if (reg) {
+      // 曲がりの大きい区間では直線が縦軸の範囲を超えるので、プロット領域で切り取る
+      ctx.save();
+      ctx.beginPath(); ctx.rect(plotL, OT, plotR - plotL, H - OT - OB); ctx.clip();
       ctx.strokeStyle = C.fit; ctx.setLineDash([5,3]); ctx.lineWidth = 1.5;
       const xa = win[0].ts, xb = xmax;
       ctx.beginPath();
       ctx.moveTo(px(xa), py(reg.slope*(xa/86400000) + reg.intercept));
       ctx.lineTo(px(xb), py(reg.slope*(xb/86400000) + reg.intercept));
       ctx.stroke(); ctx.setLineDash([]);
+      ctx.restore();
     }
     // 終点ドット＋取得日時（点の左側）
     ctx.fillStyle = C.end;
