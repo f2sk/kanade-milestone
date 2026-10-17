@@ -1322,7 +1322,8 @@ const cardCharts = (function initCardChart() {
     const span = hi - lo; if (span <= 0) return [lo];
     const mag = Math.pow(10, Math.floor(Math.log10(span / n)));
     const norm = (span / n) / mag, step = (norm >= 5 ? 5 : norm >= 2 ? 2 : 1) * mag;
-    const out = []; for (let v = Math.ceil(lo/step)*step; v <= hi + 1e-6; v += step) out.push(v);
+    // lo が僅かに負（余白分）だと Math.ceil が -0 を返し「-0万」と表示されるので、+0 で正のゼロに直す
+    const out = []; for (let v = Math.ceil(lo/step)*step + 0; v <= hi + 1e-6; v += step) out.push(v);
     return out;
   }
   function regress(pts) {
