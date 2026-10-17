@@ -1466,7 +1466,8 @@ const cardCharts = (function initCardChart() {
         if (val < vlo || val > vPeak) continue;
         const y = vy(val);
         if (y - lastY < LABEL_GAP) continue;
-        ctx.fillText(fmtMan(val) + '/日', plotR + 4, y);
+        // 1万/日未満の動画は万単位だと目盛が全部「0.1万」に丸まって区別できないので、実数で出す
+        ctx.fillText((vPeak < 1e4 ? fmtN(val) : fmtMan(val)) + '/日', plotR + 4, y);
         ctx.fillRect(plotR - 3, Math.round(y), 4, 1);  // ラベルが指す高さを示す目盛線
         lastY = y;
       }
