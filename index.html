@@ -383,16 +383,35 @@ body {
 
 /* 島のカードの主役表示（到達予想・達成） */
 .hero { border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
-.hero.soon     { background: var(--hero-soon-bg); border: 1px solid var(--hero-soon-line); }
 .hero.achieved { background: var(--hero-ach-bg); border: 1px solid var(--hero-ach-line); }
 .hero-label { font-size: 11px; color: var(--hero-label); }
 .hero-main  { font-size: 24px; font-weight: bold; line-height: 1.25; font-variant-numeric: tabular-nums; }
-.hero.soon .hero-main     { color: var(--hero-soon); }
 .hero.achieved .hero-main { color: var(--gold); }
 .hero-unit { font-size: 13px; margin-left: 3px; }
 .hero-sub  { font-size: 11px; color: var(--island-sub); }
 .views-row.compact .views-count { font-size: 17px; }
 .eta-date { font-weight: normal; }
+
+/* 「もうすぐ到達」の横長カード。節目・残り・到達予想を同じ大きさで並べ、グラフを最初から開く */
+.island.soon .card.wide { grid-column: span 2; }
+.card.wide .wide-top { display: grid; grid-template-columns: minmax(0, 45%) minmax(0, 1fr); gap: 12px; }
+.card.wide .wide-info { padding: 10px 12px 0 0; display: flex; flex-direction: column; }
+.card.wide .wide-info .views-row { margin-top: auto; margin-bottom: 0; }
+.card.wide .mark-btn { left: 6px; right: auto; }
+.card.wide .card-title { font-size: 13px; }
+.card.wide .wide-body { padding: 10px 12px; }
+.wide-stats {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
+  background: var(--hero-soon-bg); border: 1px solid var(--hero-soon-line); border-radius: 8px; padding: 8px 12px;
+}
+.wstat-label { font-size: 11px; color: var(--hero-label); }
+.wstat-val { font-size: 26px; font-weight: bold; line-height: 1.2; color: var(--text-strong); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.wstat-val small { font-size: 13px; font-weight: normal; margin-left: 2px; }
+.wstat-val.target { color: var(--milestone); }
+.wstat-val.eta    { color: var(--hero-soon); }
+.card.wide .progress-wrap { margin-top: 8px; }
+.card.wide .card-chart.open { height: 190px; }
+.card.wide .card-chart .cchart { height: 182px; }
 
 /* ── Toolbar (フィルタ・ソート) ────────────────────── */
 .toolbar {
@@ -624,6 +643,15 @@ body {
   .hero-sub { font-size: 9px; }
   .views-row.compact .views-count { font-size: 12px; }
   .eta-date { display: block; font-size: 8px; }
+  .island.soon .card.wide { grid-column: 1 / -1; }
+  .card.wide .wide-top { gap: 8px; }
+  .card.wide .card-title { font-size: 11px; }
+  .card.wide .wide-info { padding: 6px 8px 0 0; }
+  .card.wide .wide-body { padding: 6px 8px 8px; }
+  .wide-stats { gap: 4px; padding: 6px 8px; }
+  .wstat-label { font-size: 9px; }
+  .wstat-val { font-size: 17px; }
+  .wstat-val small { font-size: 10px; }
   .header-right { gap: 5px; }
   .grid { grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 6px; }
   .card-body { padding: 5px 6px 6px; }
@@ -1573,8 +1601,10 @@ function setSort(s) {
 }
 
 // ─── レンダリング ───────────────────────────────────────
-// hero=true は「達成」「もうすぐ」の島に載せるカード。到達予想（達成）を一番大きく出す
-function buildCard(a, hero = false) {
+// mode: '' = 通常 / 'hero' = 「節目達成」の島（達成を大きく出す）/
+//       'wide' = 「もうすぐ到達」の島（横に広げ、節目・残り・到達予想を同じ大きさで出し、グラフを最初から開く）
+function buildCard(a, mode = '') {
+  const hero = mode === 'hero', wide = mode === 'wide';
   const statusCls = a.hasAchievement      ? 'achieved'
                  : a.achievedWithin1Day ? 'achieved-1d'
                  : a.isApproaching       ? 'approaching' : '';
@@ -1610,7 +1640,7 @@ function buildCard(a, hero = false) {
       <span class="achieved-text">${fmtMilestone(a.recentlyAchieved)}再生 達成！</span>
     </div>` : '';
 
-  // 島のカード: 達成なら「◯万回 達成」、もうすぐなら到達予想時刻を主役にする
+  // 節目達成の島: 「◯万回 達成」と到達時刻を主役にする
   const progressHtml = `
       <div class="progress-wrap">
         <div class="progress-bar ${a.isApproaching ? 'approaching' : 'normal'}"
@@ -1624,16 +1654,9 @@ function buildCard(a, hero = false) {
       <div class="hero-main">${fmtMilestone(a.recentlyAchieved)}<span class="hero-unit">回 達成</span></div>
       ${a.achievedAt ? `<div class="hero-sub">${fmtDayTime(a.achievedAt)}頃に到達</div>` : ''}
     </div>`;
-  } else if (hero && a.isApproaching && a.nextMilestone) {
-    heroHtml = `
-    <div class="hero soon">
-      <div class="hero-label">${fmtMilestone(a.nextMilestone)}まで あと${fmtViews(a.nextMilestone - a.currentViews)}</div>
-      <div class="hero-main">${fmtEta(a.estimatedDays)}${a.estimatedDays > 0 ? '<span class="hero-unit">頃</span>' : ''}</div>
-      ${progressHtml}
-    </div>`;
   }
 
-  const milestoneHtml = (a.nextMilestone && !(hero && a.isApproaching && !a.hasAchievement)) ? `
+  const milestoneHtml = a.nextMilestone ? `
     <div class="milestone-row">
       <div class="milestone-label">NEXT MILESTONE</div>
       <div class="milestone-next">
@@ -1661,42 +1684,80 @@ function buildCard(a, hero = false) {
   const tweetUrl  = buildTweetUrl(a);
 
   const card = document.createElement('div');
-  card.className = `card ${cardCls}${isMarked ? ' marked-card' : ''}`;
+  card.className = `card ${cardCls}${isMarked ? ' marked-card' : ''}${wide ? ' wide' : ''}`;
   // サムネイル部分のみYouTube遷移（数値部分はグラフ展開のトグルに使う）
   card.addEventListener('click', (e) => {
     if (e.target.closest('.thumb-wrap'))
       window.open(`https://www.youtube.com/watch?v=${a.id}`, '_blank', 'noopener,noreferrer');
   });
-  card.innerHTML = `
+  const thumbHtml = `
     <div class="thumb-wrap">
       <img class="card-thumb" src="${escHtml(a.thumbnail)}" loading="lazy" alt="">
       ${durStr ? `<span class="thumb-duration">${escHtml(durStr)}</span>` : ''}
     </div>
     <button class="mark-btn card-btn${isMarked ? ' marked' : ''}"
-            onclick="toggleMark('${a.id}')" title="${isMarked ? 'マーク解除' : 'マーク'}">★</button>
-    <div class="card-body">
-      <div class="card-title">${escHtml(a.title)}</div>
-      ${externalBadgeHtml}
-      ${heroHtml}
+            onclick="toggleMark('${a.id}')" title="${isMarked ? 'マーク解除' : 'マーク'}">★</button>`;
+  const viewsRowHtml = `
       <div class="views-row${hero ? ' compact' : ''}">
         <span class="views-count spark-trigger" data-vid="${a.id}">${val}</span>
         <span class="views-unit spark-trigger" data-vid="${a.id}">${unit}再生</span>
         <span class="growth-inline spark-trigger" data-vid="${a.id}">${growthHtml}</span>
-      </div>
-      <div class="card-chart${openChartVids.has(a.id) ? ' open' : ''}"><canvas class="cchart" data-vid="${a.id}"></canvas></div>
-      ${achievedHtml}
-      ${milestoneHtml}
+      </div>`;
+  const bottomHtml = `
       <div class="card-bottom">
         <div class="publish-row">${escHtml(publishStr)}</div>
         <a class="tweet-btn card-btn" href="${escHtml(tweetUrl)}"
            target="_blank" rel="noopener" onclick="event.stopPropagation()">🐦 ツイート</a>
+      </div>`;
+
+  if (wide) {
+    const remain = a.nextMilestone - a.currentViews;
+    const etaVal = a.estimatedDays > 0
+      ? `${fmtEta(a.estimatedDays)}<small>頃</small>` : fmtEta(a.estimatedDays);
+    const chartOpen = !closedWideVids.has(a.id);
+    card.innerHTML = `
+    <div class="wide-top">
+      ${thumbHtml}
+      <div class="wide-info">
+        <div class="card-title">${escHtml(a.title)}</div>
+        ${externalBadgeHtml}
+        ${viewsRowHtml}
       </div>
+    </div>
+    <div class="wide-body">
+      <div class="wide-stats">
+        <div class="wstat"><div class="wstat-label">次の節目</div>
+          <div class="wstat-val target">${fmtMilestone(a.nextMilestone)}<small>回</small></div></div>
+        <div class="wstat"><div class="wstat-label">あと</div>
+          <div class="wstat-val">${fmtViews(remain)}<small>回</small></div></div>
+        <div class="wstat"><div class="wstat-label">到達予想</div>
+          <div class="wstat-val eta">${etaVal}</div></div>
+      </div>
+      ${progressHtml}
+      <div class="card-chart${chartOpen ? ' open' : ''}"><canvas class="cchart" data-vid="${a.id}"></canvas></div>
+      ${bottomHtml}
+    </div>`;
+    return card;
+  }
+
+  card.innerHTML = `
+    ${thumbHtml}
+    <div class="card-body">
+      <div class="card-title">${escHtml(a.title)}</div>
+      ${externalBadgeHtml}
+      ${heroHtml}
+      ${viewsRowHtml}
+      <div class="card-chart${openChartVids.has(a.id) ? ' open' : ''}"><canvas class="cchart" data-vid="${a.id}"></canvas></div>
+      ${achievedHtml}
+      ${milestoneHtml}
+      ${bottomHtml}
     </div>`;
   return card;
 }
 
 /* ─── カード内 再生数推移グラフ（クリックでアコーディオン展開・開いたカードのみ描画） ─── */
 let openChartVids = new Set();  // 展開中の動画id（renderMain再描画をまたいで維持）
+let closedWideVids = new Set(); // 「もうすぐ到達」の横長カードで、利用者が閉じたグラフの動画id
 const cardCharts = (function initCardChart() {
   const OL = 42, RAX = 44, OT = 16, OB = 16;  // 内側マージン（左=再生数軸/右=勢い軸/上=凡例帯/下=日付）
 
@@ -1911,11 +1972,13 @@ const cardCharts = (function initCardChart() {
     if (panel.classList.contains('open')) {
       panel.classList.remove('open');
       openChartVids.delete(vid);
+      if (card.classList.contains('wide')) closedWideVids.add(vid);
       // 閉じ切ったらバッキングを解放
       setTimeout(() => { if (!panel.classList.contains('open')) { canvas.width = 0; canvas.height = 0; } }, 250);
     } else {
       panel.classList.add('open');
       openChartVids.add(vid);
+      closedWideVids.delete(vid);
       requestAnimationFrame(() => draw(canvas));
     }
   });
@@ -2024,7 +2087,7 @@ function renderMain() {
           <div><div class="island-eyebrow">${eyebrow}</div><div class="island-title">${label}</div></div>
           <div class="island-count">${items.length}本</div>
         </div>`;
-      items.forEach(a => g.appendChild(buildCard(a, true)));
+      items.forEach(a => g.appendChild(buildCard(a, kind === 'soon' ? 'wide' : 'hero')));
       island.appendChild(g);
       content.appendChild(island);
     });
