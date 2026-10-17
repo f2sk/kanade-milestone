@@ -37,7 +37,7 @@ body {
 }
 .header-title { font-size: 13px; font-weight: bold; letter-spacing: 1px; color: #4a9eff; white-space: nowrap; }
 .header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.last-updated { font-size: 10px; color: #2a5a7a; }
+.last-updated { font-size: 11px; color: #6a8aa8; margin-left: auto; white-space: nowrap; }
 
 .btn {
   background: #0d1e30;
@@ -151,28 +151,48 @@ body {
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
+  gap: 8px 16px;
+  padding: 8px 12px;
   background: #090e18;
   border-bottom: 1px solid #0f1e2e;
   flex-wrap: wrap;
 }
-.toolbar-group { display: flex; gap: 4px; }
-.toolbar-sep { color: #1a3a5a; margin: 0 2px; }
+.toolbar-row { display: flex; align-items: center; gap: 6px; }
+.toolbar-label { font-size: 11px; color: #6a8aa8; white-space: nowrap; }
 .tbtn {
   background: #0a1520;
-  border: 1px solid #1a3a5a;
-  border-radius: 4px;
-  color: #3a6a8a;
+  border: 1px solid #2a4a6a;
+  border-radius: 6px;
+  color: #8aaac8;
   font-family: inherit;
-  font-size: 10px;
-  padding: 3px 9px;
+  font-size: 12px;
+  padding: 5px 11px;
   cursor: pointer;
   transition: all .15s;
   white-space: nowrap;
 }
-.tbtn:hover  { border-color: #3a7acc; color: #6aaeff; }
-.tbtn.active { background: #0d2040; border-color: #3a7acc; color: #4a9eff; }
+.tbtn:hover  { color: #c8e0ff; }
+.tbtn.active { background: #1d4f99; border-color: #3a7acc; color: #fff; }
+/* 択一のボタン群は1つにつなげ、どれか1つを選ぶものだと分かるようにする */
+.seg { display: inline-flex; border: 1px solid #2a4a6a; border-radius: 6px; overflow: hidden; }
+.seg .tbtn { border: none; border-radius: 0; }
+.seg .tbtn + .tbtn { border-left: 1px solid #2a4a6a; }
+/* オン・オフの切り替え（★のみ） */
+.tbtn.toggle.active { background: #3a2a00; border-color: #ffd700; color: #ffd700; }
+.search-box {
+  flex: 1;
+  min-width: 160px;
+  max-width: 280px;
+  background: #060d18;
+  border: 1px solid #2a4a6a;
+  border-radius: 6px;
+  color: #c8d8e8;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 5px 10px;
+}
+.search-box:focus { outline: none; border-color: #4a9eff; }
+.empty-msg { grid-column: 1 / -1; text-align: center; padding: 40px 0; font-size: 12px; color: #6a8aa8; }
 
 .thumb-wrap { position: relative; cursor: pointer; }
 .card-thumb {
@@ -343,7 +363,10 @@ body {
   body { overflow-x: hidden; }
   .header { padding: 7px 10px; gap: 6px; }
   .header-title { font-size: 11px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-  .last-updated { display: none; }
+  .stats-bar { gap: 10px; padding: 7px 10px; }
+  .toolbar { gap: 6px 10px; padding: 7px 10px; }
+  .tbtn { padding: 5px 9px; }
+  .search-box { max-width: none; }
   .header-right { gap: 5px; }
   .grid { grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 6px; }
   .card-body { padding: 5px 6px 6px; }
@@ -461,7 +484,6 @@ body {
 <div class="header">
   <div class="header-title" id="headerTitle">🎵 再生回数マイルストーン</div>
   <div class="header-right">
-    <span class="last-updated" id="lastUpdated">未取得</span>
     <button class="btn primary" id="refreshBtn" onclick="doRefresh()">更新</button>
     <button class="btn" id="notifBtn" onclick="requestNotif()" title="ブラウザ通知">🔔</button>
     <button class="btn" onclick="openSettings()">⚙</button>
@@ -482,22 +504,30 @@ body {
     <span class="stat-count" id="statTotal">0</span>
     <span class="stat-label">本</span>
   </div>
+  <span class="last-updated" id="lastUpdated">未取得</span>
 </div>
 
 <div class="toolbar" id="toolbar" style="display:none">
-  <div class="toolbar-group">
-    <button class="tbtn active" id="fAll"      onclick="setChannelFilter('all')">全て</button>
-    <button class="tbtn"        id="fOwn"      onclick="setChannelFilter('own')">自CH</button>
-    <button class="tbtn"        id="fExternal" onclick="setChannelFilter('external')">他CH</button>
+  <div class="toolbar-row">
+    <span class="toolbar-label">表示</span>
+    <div class="seg">
+      <button class="tbtn active" id="fAll"      onclick="setChannelFilter('all')">全て</button>
+      <button class="tbtn"        id="fOwn"      onclick="setChannelFilter('own')">自CH</button>
+      <button class="tbtn"        id="fExternal" onclick="setChannelFilter('external')">コラボ・他CH</button>
+    </div>
+    <button class="tbtn toggle" id="fMarked" onclick="toggleMarkFilter()">★のみ</button>
   </div>
-  <button class="tbtn" id="fMarked" onclick="toggleMarkFilter()">★</button>
-  <span class="toolbar-sep">|</span>
-  <div class="toolbar-group">
-    <button class="tbtn active" id="sViews"  onclick="setSort('views')">再生数</button>
-    <button class="tbtn"        id="sDate"  onclick="setSort('date')">投稿日</button>
-    <button class="tbtn"        id="sSoon"  onclick="setSort('soon')">注目</button>
-    <button class="tbtn"        id="sTrend" onclick="setSort('trend')">勢い</button>
+  <div class="toolbar-row">
+    <span class="toolbar-label">並び</span>
+    <div class="seg">
+      <button class="tbtn"        id="sSoon"  onclick="setSort('soon')">到達が近い順</button>
+      <button class="tbtn"        id="sTrend" onclick="setSort('trend')">勢い</button>
+      <button class="tbtn active" id="sViews" onclick="setSort('views')">再生数</button>
+      <button class="tbtn"        id="sDate"  onclick="setSort('date')">投稿日</button>
+    </div>
   </div>
+  <input class="search-box" id="searchBox" type="search" placeholder="🔍 タイトル検索"
+         oninput="searchQuery = this.value; renderMain()">
 </div>
 
 <div id="mainContent">
@@ -613,6 +643,7 @@ let store = {
 let markedSet      = new Set();
 let showMarkedOnly = true;
 let channelFilter  = 'all'; // 'all' | 'own' | 'external'
+let searchQuery    = '';    // タイトル検索（保存しない）
 
 let publicMode            = false;
 let publicAutoRefresh     = false;
@@ -633,7 +664,7 @@ async function publicRefetch() {
     markedSet                    = new Set(cfg.markedIds || []);
     store.pinnedVideoIds         = cfg.pinnedVideoIds || [];
     if (store.lastUpdated) {
-      document.getElementById('lastUpdated').textContent = fmtDatetime(store.lastUpdated) + ' ' + localTzLabel();
+      showLastUpdated();
     }
     const analyses = Object.keys(store.videos).map(analyzeVideo).filter(Boolean);
     checkAndNotify(analyses);
@@ -728,6 +759,21 @@ function localTzLabel() {
   const m = Math.abs(off) % 60;
   const sign = off >= 0 ? '+' : '-';
   return m ? `UTC${sign}${h}:${String(m).padStart(2,'0')}` : `UTC${sign}${h}`;
+}
+
+// 最終更新の表示。日本時間の閲覧者にはタイムゾーンを出さない
+function showLastUpdated() {
+  if (!store.lastUpdated) return;
+  const isJst = -new Date().getTimezoneOffset() === 540;
+  document.getElementById('lastUpdated').textContent =
+    `最終更新 ${fmtDatetime(store.lastUpdated)}${isJst ? '' : ' (' + localTzLabel() + ')'}`;
+}
+
+// タイトル検索用の正規化。全角半角・大文字小文字・カタカナひらがな・空白記号の揺れを吸収する
+function normSearch(s) {
+  return (s || '').normalize('NFKC').toLowerCase()
+    .replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60))
+    .replace(/[\s\p{P}\p{S}]/gu, '');
 }
 
 // 秒数 → "H:MM:SS" / "M:SS"
@@ -1570,6 +1616,12 @@ function renderMain() {
   if (channelFilter === 'own')      analyses = analyses.filter(a => !a.isExternal);
   else if (channelFilter === 'external') analyses = analyses.filter(a => a.isExternal);
   if (showMarkedOnly) analyses = analyses.filter(a => markedSet.has(a.id));
+  // 空白区切りの各語をすべて含むものに絞る
+  const terms = searchQuery.trim().split(/\s+/).map(normSearch).filter(Boolean);
+  if (terms.length) analyses = analyses.filter(a => {
+    const t = normSearch(a.title);
+    return terms.every(w => t.includes(w));
+  });
 
   // ソート
   if (sortBy === 'date') {
@@ -1615,6 +1667,12 @@ function renderMain() {
   } else {
     analyses.forEach(a => grid.appendChild(buildCard(a)));
   }
+  if (!analyses.length) {
+    const msg = document.createElement('div');
+    msg.className = 'empty-msg';
+    msg.textContent = '該当する動画がありません' + (showMarkedOnly ? '（★のみ表示中）' : '');
+    grid.appendChild(msg);
+  }
 
   const content = document.getElementById('mainContent');
   content.innerHTML = '';
@@ -1622,7 +1680,7 @@ function renderMain() {
   cardCharts.redrawOpen();  // 更新をまたいで開いていたグラフを復元
 
   if (store.lastUpdated) {
-    document.getElementById('lastUpdated').textContent = fmtDatetime(store.lastUpdated) + ' ' + localTzLabel();
+    showLastUpdated();
   }
 }
 
@@ -1911,11 +1969,6 @@ if (IS_PUBLIC_MODE) {
   refreshBtn.textContent = '⟳';
   refreshBtn.title = '自動更新 OFF（クリックで開始）';
   refreshBtn.onclick = () => togglePublicAutoRefresh();
-  // 公開モードバッジをヘッダーに追加
-  const badge = document.createElement('span');
-  badge.textContent = '公開';
-  badge.style.cssText = 'font-size:9px;padding:2px 6px;border:1px solid #1a5a2a;color:#4caf74;border-radius:3px;white-space:nowrap';
-  document.querySelector('.header-right').prepend(badge);
 
   // リロード前の通知状態を即時復元（データ取得を待たない）
   if (store.settings.notifEnabled && 'Notification' in window && Notification.permission === 'granted') {
@@ -1933,10 +1986,12 @@ if (IS_PUBLIC_MODE) {
     store.settings.channelHandle    = cfg.channelHandle || store.settings.channelHandle;
     markedSet                       = new Set(cfg.markedIds || []);
     store.pinnedVideoIds            = cfg.pinnedVideoIds || [];
+    // 自チャンネルの絞り込みボタンの表示名（例: "奏"）。未設定なら汎用の「自CH」
+    if (cfg.ownLabel) document.getElementById('fOwn').textContent = cfg.ownLabel;
     updatePageTitle();
     document.getElementById('toolbar').style.display = 'flex';
     if (store.lastUpdated) {
-      document.getElementById('lastUpdated').textContent = fmtDatetime(store.lastUpdated) + ' ' + localTzLabel();
+      showLastUpdated();
     }
     renderMain();
   }).catch(err => {
