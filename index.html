@@ -147,6 +147,31 @@ body {
 }
 .section-header:first-child { padding-top: 0; }
 
+/* ── 島（到達が近い順の「節目達成」「もうすぐ到達」） ─────────── */
+.island { margin: 12px 12px 4px; border-radius: 14px; padding: 12px 12px 2px; }
+.island.soon     { background: linear-gradient(160deg, #2b1c04 0%, #181208 70%); border: 1px solid #ffaa0055; }
+.island.achieved { background: linear-gradient(160deg, #302500 0%, #1a1505 70%); border: 1px solid #ffd70077; }
+.island .grid { padding: 10px 0 12px; }
+.island-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+.island-eyebrow { font-size: 10px; font-weight: bold; letter-spacing: .15em; }
+.island.soon .island-eyebrow     { color: #ffaa00; }
+.island.achieved .island-eyebrow { color: #ffd700; }
+.island-title { font-size: 16px; font-weight: bold; color: #f0e6d0; margin-top: 2px; }
+.island-count { font-size: 12px; color: #c8b890; }
+
+/* 島のカードの主役表示（到達予想・達成） */
+.hero { border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+.hero.soon     { background: #2a1d05; border: 1px solid #ffaa0040; }
+.hero.achieved { background: #2e2400; border: 1px solid #ffd70050; }
+.hero-label { font-size: 11px; color: #d8c8a0; }
+.hero-main  { font-size: 24px; font-weight: bold; line-height: 1.25; font-variant-numeric: tabular-nums; }
+.hero.soon .hero-main     { color: #ffb020; }
+.hero.achieved .hero-main { color: #ffd700; }
+.hero-unit { font-size: 13px; margin-left: 3px; }
+.hero-sub  { font-size: 11px; color: #c8b890; }
+.views-row.compact .views-count { font-size: 17px; }
+.eta-date { font-weight: normal; }
+
 /* ── Toolbar (フィルタ・ソート) ────────────────────── */
 .toolbar {
   display: flex;
@@ -367,6 +392,16 @@ body {
   .toolbar { gap: 6px 10px; padding: 7px 10px; }
   .tbtn { padding: 5px 9px; }
   .search-box { max-width: none; }
+  .island { margin: 8px 6px 2px; padding: 8px 6px 0; border-radius: 10px; }
+  .island .grid { padding: 6px 0 8px; }
+  .island-title { font-size: 14px; }
+  .hero { padding: 5px 6px; margin-bottom: 5px; }
+  .hero-label { font-size: 9px; }
+  .hero-main { font-size: 15px; }
+  .hero-unit { font-size: 10px; }
+  .hero-sub { font-size: 9px; }
+  .views-row.compact .views-count { font-size: 12px; }
+  .eta-date { display: block; font-size: 8px; }
   .header-right { gap: 5px; }
   .grid { grid-template-columns: repeat(3, 1fr); gap: 5px; padding: 6px; }
   .card-body { padding: 5px 6px 6px; }
@@ -746,6 +781,24 @@ function fmtEta(days) {
   return `${eta.getMonth()+1}/${eta.getDate()} ${hhmm}`;
 }
 
+// 時刻を「昨日 HH:MM」「今日 HH:MM」「明日 HH:MM」「M/D HH:MM」で返す（過去・未来どちらも可）
+function fmtDayTime(ts) {
+  const d = new Date(ts), now = new Date();
+  const hhmm = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  const diff = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate())
+                         - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+  if (diff === -1) return `昨日 ${hhmm}`;
+  if (diff === 0)  return `今日 ${hhmm}`;
+  if (diff === 1)  return `明日 ${hhmm}`;
+  return `${d.getMonth()+1}/${d.getDate()} ${hhmm}`;
+}
+
+// estimatedDays から到達予想日を「M/D頃」で返す（数日先の予想に時刻の精度は無いので日付まで）
+function fmtEtaDate(days) {
+  const eta = new Date(Date.now() + Math.max(0, days) * 24 * 3600 * 1000);
+  return `${eta.getMonth()+1}/${eta.getDate()}頃`;
+}
+
 function fmtDatetime(ts) {
   const d = new Date(ts);
   return `${d.getMonth()+1}/${d.getDate()} `
@@ -1052,8 +1105,14 @@ function analyzeVideo(videoId) {
     estimatedDays = (nextMilestone - currentViews) / growthPerDay - elapsedDays;
   }
 
+  // 直近に達成した節目を初めて上回った記録の時刻（達成時刻の目安。取得間隔ぶん遅れる）
+  const achievedAt = recentlyAchieved !== null
+    ? (video.history.find(h => h.views >= recentlyAchieved) || {}).ts ?? null
+    : null;
+
   return {
     id: videoId,
+    achievedAt,
     title:         video.title,
     thumbnail:     video.thumbnail,
     publishedAt:   video.publishedAt,
@@ -1256,7 +1315,8 @@ function setSort(s) {
 }
 
 // ─── レンダリング ───────────────────────────────────────
-function buildCard(a) {
+// hero=true は「達成」「もうすぐ」の島に載せるカード。到達予想（達成）を一番大きく出す
+function buildCard(a, hero = false) {
   const statusCls = a.hasAchievement      ? 'achieved'
                  : a.achievedWithin1Day ? 'achieved-1d'
                  : a.isApproaching       ? 'approaching' : '';
@@ -1273,8 +1333,10 @@ function buildCard(a) {
   let etaHtml;
   if (a.estimatedDays !== null) {
     const cls     = a.isApproaching ? 'soon' : 'normal';
-    const etaText = a.isApproaching ? fmtEta(a.estimatedDays) : fmtDays(a.estimatedDays);
-    etaHtml = `<span class="milestone-eta ${cls}">${etaText}</span>`;
+    // もうすぐ判定は時刻まで、それ以外は日数に日付を添える
+    etaHtml = a.isApproaching
+      ? `<span class="milestone-eta ${cls}">${fmtEta(a.estimatedDays)}</span>`
+      : `<span class="milestone-eta ${cls}">${fmtDays(a.estimatedDays)}<span class="eta-date">（${fmtEtaDate(a.estimatedDays)}）</span></span>`;
   } else {
     etaHtml = `<span class="milestone-eta unknown">勢い計算中</span>`;
   }
@@ -1284,13 +1346,36 @@ function buildCard(a) {
   const elapsed = Math.floor((Date.now() - pub.getTime()) / (1000 * 3600 * 24));
   const publishStr = `投稿: ${pub.getFullYear()}/${pub.getMonth()+1}/${pub.getDate()} · ${elapsed}日前`;
 
-  const achievedHtml = a.hasAchievement ? `
+  const achievedHtml = (a.hasAchievement && !hero) ? `
     <div class="achieved-badge">
       <span class="achieved-icon">🎉</span>
       <span class="achieved-text">${fmtMilestone(a.recentlyAchieved)}再生 達成！</span>
     </div>` : '';
 
-  const milestoneHtml = a.nextMilestone ? `
+  // 島のカード: 達成なら「◯万回 達成」、もうすぐなら到達予想時刻を主役にする
+  const progressHtml = `
+      <div class="progress-wrap">
+        <div class="progress-bar ${a.isApproaching ? 'approaching' : 'normal'}"
+             style="width:${Math.min(100, progressRatio * 100).toFixed(1)}%"></div>
+      </div>`;
+  let heroHtml = '';
+  if (hero && a.hasAchievement) {
+    heroHtml = `
+    <div class="hero achieved">
+      <div class="hero-label">🎉 節目達成</div>
+      <div class="hero-main">${fmtMilestone(a.recentlyAchieved)}<span class="hero-unit">回 達成</span></div>
+      ${a.achievedAt ? `<div class="hero-sub">${fmtDayTime(a.achievedAt)}頃に到達</div>` : ''}
+    </div>`;
+  } else if (hero && a.isApproaching && a.nextMilestone) {
+    heroHtml = `
+    <div class="hero soon">
+      <div class="hero-label">${fmtMilestone(a.nextMilestone)}まで あと${fmtViews(a.nextMilestone - a.currentViews)}</div>
+      <div class="hero-main">${fmtEta(a.estimatedDays)}${a.estimatedDays > 0 ? '<span class="hero-unit">頃</span>' : ''}</div>
+      ${progressHtml}
+    </div>`;
+  }
+
+  const milestoneHtml = (a.nextMilestone && !(hero && a.isApproaching && !a.hasAchievement)) ? `
     <div class="milestone-row">
       <div class="milestone-label">NEXT MILESTONE</div>
       <div class="milestone-next">
@@ -1334,7 +1419,8 @@ function buildCard(a) {
     <div class="card-body">
       <div class="card-title">${escHtml(a.title)}</div>
       ${externalBadgeHtml}
-      <div class="views-row">
+      ${heroHtml}
+      <div class="views-row${hero ? ' compact' : ''}">
         <span class="views-count spark-trigger" data-vid="${a.id}">${val}</span>
         <span class="views-unit spark-trigger" data-vid="${a.id}">${unit}再生</span>
         <span class="growth-inline spark-trigger" data-vid="${a.id}">${growthHtml}</span>
@@ -1643,40 +1729,59 @@ function renderMain() {
   document.getElementById('statTotal').textContent       = analyses.length;
   document.getElementById('statsBar').style.display      = 'flex';
 
-  const grid = document.createElement('div');
-  grid.className = 'grid';
+  const content = document.getElementById('mainContent');
+  content.innerHTML = '';
 
   if (sortBy === 'soon') {
-    // 注目モード: 達成済み(1日以内) / もうすぐ / その他 のセクション分け
+    // 到達が近い順: 達成済み(1日以内) と もうすぐ は色付きの島に載せ、その他は通常のグリッド
     const sec = [
-      { label: '達成済み', items: analyses.filter(a => a.achievedWithin1Day)
+      { kind: 'achieved', eyebrow: 'MILESTONE ACHIEVED', label: '節目達成',
+        items: analyses.filter(a => a.achievedWithin1Day)
           .sort((a, b) => (b.hasAchievement - a.hasAchievement) || b.currentViews - a.currentViews) },
-      { label: 'もうすぐ', items: analyses.filter(a => !a.achievedWithin1Day && a.isApproaching)
+      { kind: 'soon', eyebrow: 'COMING SOON', label: 'もうすぐ到達',
+        items: analyses.filter(a => !a.achievedWithin1Day && a.isApproaching)
           .sort((a, b) => (a.estimatedDays ?? Infinity) - (b.estimatedDays ?? Infinity)) },
-      { label: 'その他',   items: analyses.filter(a => !a.achievedWithin1Day && !a.isApproaching)
+      { kind: 'other', label: 'その他',
+        items: analyses.filter(a => !a.achievedWithin1Day && !a.isApproaching)
           .sort((a, b) => (a.estimatedDays ?? Infinity) - (b.estimatedDays ?? Infinity)) },
     ];
-    sec.forEach(({ label, items }) => {
+    sec.forEach(({ kind, eyebrow, label, items }) => {
       if (!items.length) return;
-      const hdr = document.createElement('div');
-      hdr.className = 'section-header';
-      hdr.textContent = label;
-      grid.appendChild(hdr);
-      items.forEach(a => grid.appendChild(buildCard(a)));
+      const g = document.createElement('div');
+      g.className = 'grid';
+      if (kind === 'other') {
+        const hdr = document.createElement('div');
+        hdr.className = 'section-header';
+        hdr.textContent = label;
+        g.appendChild(hdr);
+        items.forEach(a => g.appendChild(buildCard(a)));
+        content.appendChild(g);
+        return;
+      }
+      const island = document.createElement('section');
+      island.className = `island ${kind}`;
+      island.innerHTML = `
+        <div class="island-head">
+          <div><div class="island-eyebrow">${eyebrow}</div><div class="island-title">${label}</div></div>
+          <div class="island-count">${items.length}本</div>
+        </div>`;
+      items.forEach(a => g.appendChild(buildCard(a, true)));
+      island.appendChild(g);
+      content.appendChild(island);
     });
   } else {
-    analyses.forEach(a => grid.appendChild(buildCard(a)));
+    const g = document.createElement('div');
+    g.className = 'grid';
+    analyses.forEach(a => g.appendChild(buildCard(a)));
+    content.appendChild(g);
   }
   if (!analyses.length) {
     const msg = document.createElement('div');
     msg.className = 'empty-msg';
     msg.textContent = '該当する動画がありません' + (showMarkedOnly ? '（★のみ表示中）' : '');
-    grid.appendChild(msg);
+    content.appendChild(msg);
   }
 
-  const content = document.getElementById('mainContent');
-  content.innerHTML = '';
-  content.appendChild(grid);
   cardCharts.redrawOpen();  // 更新をまたいで開いていたグラフを復元
 
   if (store.lastUpdated) {
