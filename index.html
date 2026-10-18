@@ -379,6 +379,10 @@ body {
 .island-count { font-size: 12px; color: var(--island-sub); }
 
 .eta-date { font-weight: normal; }
+/* 100万回の到達予想（目安） */
+.million-row { margin-top: 5px; font-size: 10px; color: var(--text-secondary); line-height: 1.5; }
+.million-eta { display: block; color: var(--gold); font-weight: bold; }
+.card.wide .million-row { font-size: 12px; margin-top: 6px; }
 
 /* 島の横長カード。主要な数字3つを同じ大きさで並べ、グラフを最初から開く */
 .island .card.wide { grid-column: span 2; }
@@ -628,6 +632,8 @@ body {
   .island .grid { padding: 6px 0 8px; }
   .island-title { font-size: 13px; }
   .eta-date { display: block; font-size: 8px; }
+  .million-row { font-size: 8px; margin-top: 3px; }
+  .card.wide .million-row { font-size: 10px; }
   .island .card.wide { grid-column: 1 / -1; }
   .card.wide .wide-top { gap: 8px; }
   .card.wide .card-title { font-size: 11px; }
@@ -879,6 +885,8 @@ const MILESTONES = (() => {
   return m;
 })();
 
+const MILLION = 1_000_000;
+
 function getNextMilestone(views) {
   return MILESTONES.find(m => m > views) || null;
 }
@@ -1032,7 +1040,9 @@ function fmtDayTime(ts) {
 // estimatedDays から到達予想日を「M/D頃」で返す（数日先の予想に時刻の精度は無いので日付まで）
 function fmtEtaDate(days) {
   const eta = new Date(Date.now() + Math.max(0, days) * 24 * 3600 * 1000);
-  return `${eta.getMonth()+1}/${eta.getDate()}頃`;
+  const md = `${eta.getMonth()+1}/${eta.getDate()}頃`;
+  // 1年以上先は月日だけだと紛らわしいので年を付ける
+  return days >= 365 ? `${eta.getFullYear()}/${md}` : md;
 }
 
 function fmtDatetime(ts) {
@@ -1369,12 +1379,12 @@ function analyzeVideo(videoId) {
   const isExternal = !!(ownCh && video.channelId && video.channelId !== ownCh);
 
   // 最終取得から現在までの経過分を増加速度で補正してETAを計算
-  let estimatedDays = null;
-  if (nextMilestone && growthPerDay > 0) {
-    const lastTs = video.history[video.history.length - 1].ts;
-    const elapsedDays = (Date.now() - lastTs) / 86400000;
-    estimatedDays = (nextMilestone - currentViews) / growthPerDay - elapsedDays;
-  }
+  const lastTs = video.history[video.history.length - 1].ts;
+  const etaDays = target => (target && growthPerDay > 0)
+    ? (target - currentViews) / growthPerDay - (Date.now() - lastTs) / 86400000 : null;
+  const estimatedDays = etaDays(nextMilestone);
+  // ミリオン（100万）は特別扱い。次の節目より先にある場合も、今の勢いのままの到達予想を出す
+  const millionDays = (currentViews < MILLION && nextMilestone !== MILLION) ? etaDays(MILLION) : null;
 
   // 直近に達成した節目を初めて上回った記録の時刻（達成時刻の目安。取得間隔ぶん遅れる）
   const achievedAt = recentlyAchieved !== null
@@ -1392,6 +1402,7 @@ function analyzeVideo(videoId) {
     nextMilestone,
     growthPerDay,
     estimatedDays,
+    millionDays,
     recentlyAchieved,
     isApproaching:       estimatedDays !== null && estimatedDays <= store.settings.thresholdDays,
     hasAchievement:      recentlyAchieved !== null,
@@ -1629,6 +1640,17 @@ function buildCard(a, wide = false) {
         <div class="progress-bar ${a.isApproaching ? 'approaching' : 'normal'}"
              style="width:${Math.min(100, progressRatio * 100).toFixed(1)}%"></div>
       </div>`;
+  // 100万回の到達予想（★の動画だけ）。今の勢いが続いた場合の線形の目安で、勢いは普通落ちるので楽観的
+  let millionHtml = '';
+  if (a.millionDays !== null && markedSet.has(a.id)) {
+    const when = a.millionDays > 3650 ? '10年以上先'
+      : `今のペースなら${a.millionDays >= 365 ? `約${(a.millionDays / 365).toFixed(1)}年後` : fmtDays(a.millionDays)}（${fmtEtaDate(a.millionDays)}）`;
+    millionHtml = `
+      <div class="million-row" title="今の勢いが続いた場合の目安。勢いは普通だんだん落ちるので、実際はこれより遅くなりがち">
+        🏆 100万回まで あと${fmtViews(MILLION - a.currentViews)}<span class="million-eta">${when}</span>
+      </div>`;
+  }
+
   const milestoneHtml = a.nextMilestone ? `
     <div class="milestone-row">
       <div class="milestone-label">NEXT MILESTONE</div>
@@ -1641,6 +1663,7 @@ function buildCard(a, wide = false) {
         <div class="progress-bar ${a.isApproaching ? 'approaching' : 'normal'}"
              style="width:${Math.min(100, progressRatio * 100).toFixed(1)}%"></div>
       </div>
+      ${millionHtml}
     </div>` : '';
 
   const growthHtml = a.growthPerDay !== null
@@ -1716,6 +1739,7 @@ function buildCard(a, wide = false) {
     <div class="wide-body">
       ${statsHtml}
       ${progressHtml}
+      ${millionHtml}
       <div class="card-chart${chartOpen ? ' open' : ''}"><canvas class="cchart" data-vid="${a.id}"></canvas></div>
       ${bottomHtml}
     </div>`;
