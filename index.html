@@ -95,7 +95,6 @@
   --accent-text: #fff;
   --milestone: #6ab0ff;
   --eta-normal: #3a7a9a;
-  --island-title: #f0e6d0;
   --island-sub: #c8b890;
   --hero-label: #d8c8a0;
   --hero-soon: #ffb020;
@@ -200,7 +199,6 @@
   --accent-text: #ffffff;
   --milestone: #1f5fc8;
   --eta-normal: #3f6f95;
-  --island-title: #3a2a05;
   --island-sub: #7a6430;
   --hero-label: #6e5a2a;
   --hero-soon: #c76a00;
@@ -369,31 +367,21 @@ body {
 }
 .section-header:first-child { padding-top: 0; }
 
-/* ── 島（到達が近い順の「節目達成」「もうすぐ到達」） ─────────── */
+/* ── 島（到達が近い順の MILESTONE ACHIEVED / COMING SOON） ─────────── */
 .island { margin: 12px 12px 4px; border-radius: 14px; padding: 12px 12px 2px; }
 .island.soon     { background: linear-gradient(160deg, var(--island-soon-bg1) 0%, var(--island-soon-bg2) 70%); border: 1px solid var(--island-soon-line); }
 .island.achieved { background: linear-gradient(160deg, var(--island-ach-bg1) 0%, var(--island-ach-bg2) 70%); border: 1px solid var(--island-ach-line); }
 .island .grid { padding: 10px 0 12px; }
 .island-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
-.island-eyebrow { font-size: 10px; font-weight: bold; letter-spacing: .15em; }
-.island.soon .island-eyebrow     { color: var(--orange); }
-.island.achieved .island-eyebrow { color: var(--gold); }
-.island-title { font-size: 16px; font-weight: bold; color: var(--island-title); margin-top: 2px; }
+.island-title { font-size: 15px; font-weight: bold; letter-spacing: .15em; }
+.island.soon .island-title     { color: var(--orange); }
+.island.achieved .island-title { color: var(--gold); }
 .island-count { font-size: 12px; color: var(--island-sub); }
 
-/* 島のカードの主役表示（到達予想・達成） */
-.hero { border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
-.hero.achieved { background: var(--hero-ach-bg); border: 1px solid var(--hero-ach-line); }
-.hero-label { font-size: 11px; color: var(--hero-label); }
-.hero-main  { font-size: 24px; font-weight: bold; line-height: 1.25; font-variant-numeric: tabular-nums; }
-.hero.achieved .hero-main { color: var(--gold); }
-.hero-unit { font-size: 13px; margin-left: 3px; }
-.hero-sub  { font-size: 11px; color: var(--island-sub); }
-.views-row.compact .views-count { font-size: 17px; }
 .eta-date { font-weight: normal; }
 
-/* 「もうすぐ到達」の横長カード。節目・残り・到達予想を同じ大きさで並べ、グラフを最初から開く */
-.island.soon .card.wide { grid-column: span 2; }
+/* 島の横長カード。主要な数字3つを同じ大きさで並べ、グラフを最初から開く */
+.island .card.wide { grid-column: span 2; }
 .card.wide .wide-top { display: grid; grid-template-columns: minmax(0, 45%) minmax(0, 1fr); gap: 12px; }
 .card.wide .wide-info { padding: 10px 12px 0 0; display: flex; flex-direction: column; }
 .card.wide .wide-info .views-row { margin-top: auto; margin-bottom: 0; }
@@ -410,6 +398,8 @@ body {
 .wstat-val small { font-size: 13px; font-weight: normal; margin-left: 2px; }
 .wstat-val.target { color: var(--milestone); }
 .wstat-val.eta    { color: var(--hero-soon); }
+.wstat-val.gold   { color: var(--gold); }
+.wide-stats.ach   { background: var(--hero-ach-bg); border-color: var(--hero-ach-line); }
 .card.wide .progress-wrap { margin-top: 8px; }
 .card.wide .card-chart.open { height: 190px; }
 .card.wide .card-chart .cchart { height: 182px; }
@@ -636,15 +626,9 @@ body {
   .search-box { max-width: none; }
   .island { margin: 8px 6px 2px; padding: 8px 6px 0; border-radius: 10px; }
   .island .grid { padding: 6px 0 8px; }
-  .island-title { font-size: 14px; }
-  .hero { padding: 5px 6px; margin-bottom: 5px; }
-  .hero-label { font-size: 9px; }
-  .hero-main { font-size: 15px; }
-  .hero-unit { font-size: 10px; }
-  .hero-sub { font-size: 9px; }
-  .views-row.compact .views-count { font-size: 12px; }
+  .island-title { font-size: 13px; }
   .eta-date { display: block; font-size: 8px; }
-  .island.soon .card.wide { grid-column: 1 / -1; }
+  .island .card.wide { grid-column: 1 / -1; }
   .card.wide .wide-top { gap: 8px; }
   .card.wide .card-title { font-size: 11px; }
   .card.wide .wide-info { padding: 6px 8px 0 0; }
@@ -1602,10 +1586,9 @@ function setSort(s) {
 }
 
 // ─── レンダリング ───────────────────────────────────────
-// mode: '' = 通常 / 'hero' = 「節目達成」の島（達成を大きく出す）/
-//       'wide' = 「もうすぐ到達」の島（横に広げ、節目・残り・到達予想を同じ大きさで出し、グラフを最初から開く）
-function buildCard(a, mode = '') {
-  const hero = mode === 'hero', wide = mode === 'wide';
+// wide=true は島（MILESTONE ACHIEVED / COMING SOON）のカード。横に広げて主要な数字を3つ同じ大きさで並べ、
+// グラフを最初から開く。達成の島では「達成・到達時刻・次」、到達間近の島では「次・あと・到達予想」
+function buildCard(a, wide = false) {
   const statusCls = a.hasAchievement      ? 'achieved'
                  : a.achievedWithin1Day ? 'achieved-1d'
                  : a.isApproaching       ? 'approaching' : '';
@@ -1635,28 +1618,17 @@ function buildCard(a, mode = '') {
   const elapsed = Math.floor((Date.now() - pub.getTime()) / (1000 * 3600 * 24));
   const publishStr = `投稿: ${pub.getFullYear()}/${pub.getMonth()+1}/${pub.getDate()} · ${elapsed}日前`;
 
-  const achievedHtml = (a.hasAchievement && !hero) ? `
+  const achievedHtml = a.hasAchievement ? `
     <div class="achieved-badge">
       <span class="achieved-icon">🎉</span>
       <span class="achieved-text">${fmtMilestone(a.recentlyAchieved)}再生 達成！</span>
     </div>` : '';
 
-  // 節目達成の島: 「◯万回 達成」と到達時刻を主役にする
   const progressHtml = `
       <div class="progress-wrap">
         <div class="progress-bar ${a.isApproaching ? 'approaching' : 'normal'}"
              style="width:${Math.min(100, progressRatio * 100).toFixed(1)}%"></div>
       </div>`;
-  let heroHtml = '';
-  if (hero && a.hasAchievement) {
-    heroHtml = `
-    <div class="hero achieved">
-      <div class="hero-label">🎉 節目達成</div>
-      <div class="hero-main">${fmtMilestone(a.recentlyAchieved)}<span class="hero-unit">回 達成</span></div>
-      ${a.achievedAt ? `<div class="hero-sub">${fmtDayTime(a.achievedAt)}頃に到達</div>` : ''}
-    </div>`;
-  }
-
   const milestoneHtml = a.nextMilestone ? `
     <div class="milestone-row">
       <div class="milestone-label">NEXT MILESTONE</div>
@@ -1699,7 +1671,7 @@ function buildCard(a, mode = '') {
     <button class="mark-btn card-btn${isMarked ? ' marked' : ''}"
             onclick="toggleMark('${a.id}')" title="${isMarked ? 'マーク解除' : 'マーク'}">★</button>`;
   const viewsRowHtml = `
-      <div class="views-row${hero ? ' compact' : ''}">
+      <div class="views-row">
         <span class="views-count spark-trigger" data-vid="${a.id}">${val}</span>
         <span class="views-unit spark-trigger" data-vid="${a.id}">${unit}再生</span>
         <span class="growth-inline spark-trigger" data-vid="${a.id}">${growthHtml}</span>
@@ -1712,9 +1684,25 @@ function buildCard(a, mode = '') {
       </div>`;
 
   if (wide) {
-    const remain = a.nextMilestone - a.currentViews;
-    const etaVal = a.estimatedDays > 0
-      ? `${fmtEta(a.estimatedDays)}<small>頃</small>` : fmtEta(a.estimatedDays);
+    const stat = (label, cls, val) =>
+      `<div class="wstat"><div class="wstat-label">${label}</div><div class="wstat-val ${cls}">${val}</div></div>`;
+    let statsHtml;
+    if (a.achievedWithin1Day && a.recentlyAchieved) {
+      statsHtml = `<div class="wide-stats ach">
+        ${stat('達成', 'gold', `🎉 ${fmtMilestone(a.recentlyAchieved)}<small>回再生</small>`)}
+        ${stat('到達', '', a.achievedAt ? `${fmtDayTime(a.achievedAt)}<small>頃</small>` : '—')}
+        ${stat('次のマイルストーン', 'target', a.nextMilestone
+          ? `${fmtMilestone(a.nextMilestone)}<small>回${a.estimatedDays !== null ? '（' + fmtDays(a.estimatedDays) + '）' : ''}</small>` : '—')}
+      </div>`;
+    } else {
+      const etaVal = a.estimatedDays > 0
+        ? `${fmtEta(a.estimatedDays)}<small>頃</small>` : fmtEta(a.estimatedDays);
+      statsHtml = `<div class="wide-stats">
+        ${stat('次のマイルストーン', 'target', `${fmtMilestone(a.nextMilestone)}<small>回</small>`)}
+        ${stat('あと', '', `${fmtViews(a.nextMilestone - a.currentViews)}<small>回</small>`)}
+        ${stat('到達予想', 'eta', etaVal)}
+      </div>`;
+    }
     const chartOpen = !closedWideVids.has(a.id);
     card.innerHTML = `
     <div class="wide-top">
@@ -1726,14 +1714,7 @@ function buildCard(a, mode = '') {
       </div>
     </div>
     <div class="wide-body">
-      <div class="wide-stats">
-        <div class="wstat"><div class="wstat-label">次の節目</div>
-          <div class="wstat-val target">${fmtMilestone(a.nextMilestone)}<small>回</small></div></div>
-        <div class="wstat"><div class="wstat-label">あと</div>
-          <div class="wstat-val">${fmtViews(remain)}<small>回</small></div></div>
-        <div class="wstat"><div class="wstat-label">到達予想</div>
-          <div class="wstat-val eta">${etaVal}</div></div>
-      </div>
+      ${statsHtml}
       ${progressHtml}
       <div class="card-chart${chartOpen ? ' open' : ''}"><canvas class="cchart" data-vid="${a.id}"></canvas></div>
       ${bottomHtml}
@@ -1746,7 +1727,6 @@ function buildCard(a, mode = '') {
     <div class="card-body">
       <div class="card-title">${escHtml(a.title)}</div>
       ${externalBadgeHtml}
-      ${heroHtml}
       ${viewsRowHtml}
       <div class="card-chart${openChartVids.has(a.id) ? ' open' : ''}"><canvas class="cchart" data-vid="${a.id}"></canvas></div>
       ${achievedHtml}
@@ -2062,17 +2042,17 @@ function renderMain() {
   if (sortBy === 'soon') {
     // 到達が近い順: 達成済み(1日以内) と もうすぐ は色付きの島に載せ、その他は通常のグリッド
     const sec = [
-      { kind: 'achieved', eyebrow: 'MILESTONE ACHIEVED', label: '節目達成',
+      { kind: 'achieved', label: 'MILESTONE ACHIEVED',
         items: analyses.filter(a => a.achievedWithin1Day)
           .sort((a, b) => (b.hasAchievement - a.hasAchievement) || b.currentViews - a.currentViews) },
-      { kind: 'soon', eyebrow: 'COMING SOON', label: 'もうすぐ到達',
+      { kind: 'soon', label: 'COMING SOON',
         items: analyses.filter(a => !a.achievedWithin1Day && a.isApproaching)
           .sort((a, b) => (a.estimatedDays ?? Infinity) - (b.estimatedDays ?? Infinity)) },
       { kind: 'other', label: 'その他',
         items: analyses.filter(a => !a.achievedWithin1Day && !a.isApproaching)
           .sort((a, b) => (a.estimatedDays ?? Infinity) - (b.estimatedDays ?? Infinity)) },
     ];
-    sec.forEach(({ kind, eyebrow, label, items }) => {
+    sec.forEach(({ kind, label, items }) => {
       if (!items.length) return;
       const g = document.createElement('div');
       g.className = 'grid';
@@ -2089,10 +2069,10 @@ function renderMain() {
       island.className = `island ${kind}`;
       island.innerHTML = `
         <div class="island-head">
-          <div><div class="island-eyebrow">${eyebrow}</div><div class="island-title">${label}</div></div>
+          <div class="island-title">${label}</div>
           <div class="island-count">${items.length}本</div>
         </div>`;
-      items.forEach(a => g.appendChild(buildCard(a, kind === 'soon' ? 'wide' : 'hero')));
+      items.forEach(a => g.appendChild(buildCard(a, true)));
       island.appendChild(g);
       content.appendChild(island);
     });
