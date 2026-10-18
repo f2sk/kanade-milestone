@@ -1644,7 +1644,7 @@ function buildCard(a, wide = false) {
   let millionHtml = '';
   if (a.millionDays !== null && markedSet.has(a.id)) {
     const when = a.millionDays > 3650 ? '10年以上先'
-      : `今のペースなら${a.millionDays >= 365 ? `約${(a.millionDays / 365).toFixed(1)}年後` : fmtDays(a.millionDays)}（${fmtEtaDate(a.millionDays)}）`;
+      : `${a.millionDays >= 365 ? `約${(a.millionDays / 365).toFixed(1)}年後` : fmtDays(a.millionDays)}（${fmtEtaDate(a.millionDays)}）`;
     millionHtml = `
       <div class="million-row" title="今の勢いが続いた場合の目安。勢いは普通だんだん落ちるので、実際はこれより遅くなりがち">
         🏆 100万回まで あと${fmtViews(MILLION - a.currentViews)}<span class="million-eta">${when}</span>
