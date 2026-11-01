@@ -1907,8 +1907,13 @@ const cardCharts = (function initCardChart() {
     const vel = velocitySeries(h).filter(p => !truncated || p.ts >= h[0].ts + DAY_MS);
     let vy = null;
     if (vel.length >= 2) {
-      let vmin = Infinity, vmax = -Infinity, tsPeak = vel[0].ts;
-      for (const p of vel) { if (p.v < vmin) vmin = p.v; if (p.v > vmax) { vmax = p.v; tsPeak = p.ts; } }
+      // 公開直後の急騰が軸の範囲に入ると、その後の変化が底に張り付いて見えない。
+      // 範囲は公開から7日以降の勢いで決め、急騰は上端で切る（公開1週間以内の動画は従来どおり全体で決める）
+      const LAUNCH_MS = 7 * DAY_MS;
+      let rangePts = isNaN(pubMs) ? vel : vel.filter(p => p.ts >= pubMs + LAUNCH_MS);
+      if (rangePts.length < 2) rangePts = vel;
+      let vmin = Infinity, vmax = -Infinity, tsPeak = rangePts[0].ts;
+      for (const p of rangePts) { if (p.v < vmin) vmin = p.v; if (p.v > vmax) { vmax = p.v; tsPeak = p.ts; } }
       const vlo = Math.min(0, vmin), vPeak = (vmax > vlo ? vmax : vlo + 1);
       const MARGIN = 14;  // 再生数ラインと勢いピークの縦間隔[px]（要調整）
       // ピーク時刻での再生数ライン高さ（線形補間）
@@ -1944,11 +1949,14 @@ const cardCharts = (function initCardChart() {
         ctx.fillRect(plotR - 3, Math.round(y), 4, 1);  // ラベルが指す高さを示す目盛線
         lastY = y;
       }
-      // 勢いライン
+      // 勢いライン（軸の範囲を超える古い山はプロット領域で切る）
+      ctx.save();
+      ctx.beginPath(); ctx.rect(plotL, OT, plotR - plotL, H - OT - OB); ctx.clip();
       ctx.strokeStyle = C.vel; ctx.lineWidth = 1.4; ctx.lineJoin = 'round';
       ctx.beginPath();
       vel.forEach((p,i) => { const x = px(p.ts), y = vy(p.v); i ? ctx.lineTo(x,y) : ctx.moveTo(x,y); });
       ctx.stroke();
+      ctx.restore();
     }
 
     // ホバー：クロスヘア＋点、上部に読み値
@@ -1962,7 +1970,7 @@ const cardCharts = (function initCardChart() {
       ctx.fillStyle = C.hoverDot; ctx.beginPath(); ctx.arc(x, y, 3, 0, 7); ctx.fill();
       let vBest = null, vbd = Infinity;
       if (vy) for (const p of vel) { const d = Math.abs(p.ts - hoverTs); if (d < vbd) { vbd = d; vBest = p; } }
-      if (vBest && vy) { ctx.fillStyle = C.vel; ctx.beginPath(); ctx.arc(px(vBest.ts), vy(vBest.v), 3, 0, 7); ctx.fill(); }
+      if (vBest && vy && vy(vBest.v) >= OT) { ctx.fillStyle = C.vel; ctx.beginPath(); ctx.arc(px(vBest.ts), vy(vBest.v), 3, 0, 7); ctx.fill(); }
       readout = fmtDT(best.ts) + ' ・ ' + fmtN(best.views) + '回'
         + (vBest ? ' ・ 勢い ' + (vBest.v >= 0 ? '+' : '') + fmtMan(vBest.v) + '/日' : '');
     }
