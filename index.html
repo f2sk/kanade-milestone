@@ -913,7 +913,8 @@ let store = {
     showMarkedOnly: true,
     sortBy: 'soon',
     ownChannelId: '',  // チャンネル取得時に保存
-    notifEnabled: true
+    notifEnabled: false,      // 通知は既定OFF（使う人だけが🔔で有効にする）
+    publicAutoRefresh: true   // 公開モードの自動更新は既定ON。切り替えたらその選択を保存する
   },
   videos: {},
   lastUpdated: null,
@@ -965,11 +966,12 @@ function togglePublicAutoRefresh(forceOn) {
   if (publicAutoRefresh) {
     publicRefreshTimer = setInterval(publicRefetch, PUBLIC_REFRESH_MS);
   } else if (store.settings.notifEnabled) {
-    // 自動更新OFFにしたら通知も連動してOFFに
+    // 通知は自動更新で取った新しいデータで判定するので、自動更新を止めたら通知もOFFにする
     store.settings.notifEnabled = false;
-    saveStore();
     updateNotifBtn();
   }
+  store.settings.publicAutoRefresh = publicAutoRefresh;
+  saveStore();
 }
 
 function loadStore() {
@@ -987,7 +989,10 @@ function loadStore() {
 }
 
 function saveStore() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch(e) {}
+  // 公開モードの動画データ（数MB）は毎回 public_data.json から読むので保存しない。
+  // 丸ごと保存すると容量上限で失敗し、設定（並び順・自動更新など）まで保存されなくなる
+  const data = IS_PUBLIC_MODE ? { settings: store.settings, notified: store.notified } : store;
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch(e) {}
 }
 
 // ─── フォーマット ──────────────────────────────────────
@@ -1544,10 +1549,8 @@ async function requestNotif() {
   if (Notification.permission === 'denied') { alert('通知がブロックされています。ブラウザのサイト設定から許可してください'); return; }
   if (Notification.permission === 'granted') {
     store.settings.notifEnabled = !store.settings.notifEnabled;
-    if (publicMode) {
-      if (store.settings.notifEnabled && !publicAutoRefresh) togglePublicAutoRefresh(true);
-      if (!store.settings.notifEnabled && publicAutoRefresh) togglePublicAutoRefresh(false);
-    }
+    // 通知をONにするときは自動更新が必要なので一緒にONにする。OFFにしても自動更新はそのまま
+    if (publicMode && store.settings.notifEnabled && !publicAutoRefresh) togglePublicAutoRefresh(true);
     saveStore();
     updateNotifBtn();
     return;
@@ -2415,10 +2418,9 @@ if (IS_PUBLIC_MODE) {
   refreshBtn.title = '自動更新 OFF（クリックで開始）';
   refreshBtn.onclick = () => togglePublicAutoRefresh();
 
-  // リロード前の通知状態を即時復元（データ取得を待たない）
-  if (store.settings.notifEnabled && 'Notification' in window && Notification.permission === 'granted') {
-    togglePublicAutoRefresh(true);
-  }
+  // 自動更新は既定ON（利用者がOFFにしていればOFF）。通知がONなら自動更新も必要なのでON
+  const notifOn = store.settings.notifEnabled && 'Notification' in window && Notification.permission === 'granted';
+  togglePublicAutoRefresh(store.settings.publicAutoRefresh !== false || notifOn);
 
   Promise.all([
     fetch('./public_data.json').then(r => { if (!r.ok) throw new Error('public_data.json'); return r.json(); }),
