@@ -25,6 +25,7 @@
 <style>
 :root {
   --bg: #080d15;
+  --cal-cell-line: #1e3247;  /* カレンダーのマス・週の日枠の線 */
   --bg-header: #0c1520;
   --bg-stats: #0a1018;
   --bg-toolbar: #090e18;
@@ -129,6 +130,7 @@
 :root[data-theme="light"] {
   color-scheme: light;
   --bg: #f3f6fb;
+  --cal-cell-line: #b9c7d8;
   --bg-header: #ffffff;
   --bg-stats: #f8fafd;
   --bg-toolbar: #f8fafd;
@@ -500,7 +502,7 @@ body {
 .cal-dow.sat { color: var(--accent); }
 .cal-cell {
   min-height: 64px; min-width: 0; padding: 3px; border-radius: 6px;
-  background: var(--surface); border: 1px solid var(--border-subtle);
+  background: var(--surface); border: 1px solid var(--cal-cell-line);
   display: flex; flex-direction: column; gap: 3px;
 }
 .cal-cell.out   { opacity: .35; }
@@ -526,7 +528,7 @@ body {
 .cal-badge { display: inline-block; font-size: 10px; padding: 0 6px; border-radius: 8px; border: 1px solid var(--accent-border); color: var(--accent); margin-right: 6px; }
 .cal-nav .seg { margin-right: 4px; }
 .cal-week { display: flex; flex-direction: column; gap: 6px; }
-.cal-wday { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 6px 8px; }
+.cal-wday { background: var(--surface); border: 1px solid var(--cal-cell-line); border-radius: 8px; padding: 6px 8px; }
 .cal-wday.today { border-color: var(--accent); }
 .cal-wday-head { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; }
 .cal-wday-head.sun { color: #e05a5a; }
