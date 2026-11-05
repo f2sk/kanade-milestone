@@ -487,6 +487,56 @@ body {
   padding: 5px 10px;
 }
 .search-box:focus { outline: none; border-color: var(--accent); }
+/* ── カレンダー（自CHの配信・動画・予定枠） ───────────── */
+.cal { padding: 10px 12px 16px; }
+.cal-nav { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.cal-nav select {
+  background: var(--input-bg); border: 1px solid var(--border-control); border-radius: 6px;
+  color: var(--text); font-family: inherit; font-size: 13px; padding: 4px 6px;
+}
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-dow { font-size: 10px; text-align: center; color: var(--text-secondary); padding-bottom: 2px; }
+.cal-dow.sun { color: #e05a5a; }
+.cal-dow.sat { color: var(--accent); }
+.cal-cell {
+  min-height: 64px; min-width: 0; padding: 3px; border-radius: 6px;
+  background: var(--surface); border: 1px solid var(--border-subtle);
+  display: flex; flex-direction: column; gap: 3px;
+}
+.cal-cell.out   { opacity: .35; }
+.cal-cell.today { border-color: var(--accent); }
+.cal-day { font-size: 10px; color: var(--text-secondary); line-height: 1; }
+.cal-cell.today .cal-day { color: var(--accent); font-weight: bold; }
+.cal-thumb {
+  display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 3px;
+  cursor: pointer; background: var(--surface-sunken); border: 2px solid transparent;
+}
+.cal-thumb.upcoming { outline: 1px dashed var(--accent); outline-offset: -1px; opacity: .8; }
+.cal-thumb.sel { border-color: var(--accent); }
+/* サムネを押すと、その週の行の下に詳細を広げる */
+.cal-detail {
+  grid-column: 1 / -1; display: flex; gap: 12px; align-items: flex-start;
+  padding: 10px; border-radius: 8px; background: var(--surface-sunken); border: 1px solid var(--accent-border);
+}
+.cal-detail img { width: 160px; max-width: 40%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+.cal-detail-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.cal-detail-title { font-size: 13px; line-height: 1.45; color: var(--text); text-decoration: underline; text-decoration-color: var(--border-control); }
+.cal-detail-title:hover { color: var(--accent); }
+.cal-detail-meta { font-size: 11px; color: var(--text-secondary); }
+.cal-badge { display: inline-block; font-size: 10px; padding: 0 6px; border-radius: 8px; border: 1px solid var(--accent-border); color: var(--accent); margin-right: 6px; }
+.cal-nav .seg { margin-right: 4px; }
+.cal-week { display: flex; flex-direction: column; gap: 6px; }
+.cal-wday { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 6px 8px; }
+.cal-wday.today { border-color: var(--accent); }
+.cal-wday-head { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; }
+.cal-wday-head.sun { color: #e05a5a; }
+.cal-wday-head.sat { color: var(--accent); }
+.cal-wday.today .cal-wday-head { color: var(--accent); font-weight: bold; }
+.cal-wtime { width: 40px; flex-shrink: 0; font-size: 12px; color: var(--text-secondary); text-align: right; }
+.cal-wbody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cal-wnone { font-size: 11px; color: var(--text-secondary); padding: 2px 0 2px 50px; }
+.otd-thumb.upcoming { outline: 1px dashed var(--accent); outline-offset: -1px; opacity: .8; }
+.cal-close { background: none; border: none; color: var(--text-secondary); font-size: 16px; cursor: pointer; padding: 0 4px; }
 .empty-msg { grid-column: 1 / -1; text-align: center; padding: 40px 0; font-size: 12px; color: var(--text-secondary); }
 
 .thumb-wrap { position: relative; cursor: pointer; }
@@ -662,6 +712,9 @@ body {
   .toolbar { gap: 6px 10px; padding: 7px 10px; }
   .tbtn { padding: 5px 9px; }
   .search-box { max-width: none; }
+  .cal { padding: 8px 6px 12px; }
+  .cal-grid { gap: 2px; }
+  .cal-cell { padding: 2px; min-height: 48px; }
   .island { margin: 8px 6px 2px; padding: 8px 6px 0; border-radius: 10px; }
   .island .grid { padding: 6px 0 8px; }
   .island-title { font-size: 13px; }
@@ -823,6 +876,13 @@ body {
 
 <div class="toolbar" id="toolbar" style="display:none">
   <div class="toolbar-row">
+    <span class="toolbar-label">形式</span>
+    <div class="seg">
+      <button class="tbtn active" id="vCard" onclick="setViewMode('card')">カード</button>
+      <button class="tbtn"        id="vCal"  onclick="setViewMode('cal')">カレンダー</button>
+    </div>
+  </div>
+  <div class="toolbar-row" id="rowFilter">
     <span class="toolbar-label">表示</span>
     <div class="seg">
       <button class="tbtn active" id="fAll"      onclick="setChannelFilter('all')">全て</button>
@@ -831,7 +891,7 @@ body {
     </div>
     <button class="tbtn toggle" id="fMarked" onclick="toggleMarkFilter()">★のみ</button>
   </div>
-  <div class="toolbar-row">
+  <div class="toolbar-row" id="rowSort">
     <span class="toolbar-label">並び</span>
     <div class="seg">
       <button class="tbtn"        id="sSoon"  onclick="setSort('soon')">到達が近い順</button>
@@ -961,6 +1021,7 @@ let markedSet      = new Set();
 let showMarkedOnly = true;
 let channelFilter  = 'all'; // 'all' | 'own' | 'external'
 let searchQuery    = '';    // タイトル検索（保存しない）
+let viewMode       = 'card'; // 'card' | 'cal'
 
 let publicMode            = false;
 let publicAutoRefresh     = false;
@@ -1018,6 +1079,7 @@ function loadStore() {
   channelFilter  = store.settings.channelFilter  ?? 'all';
   showMarkedOnly = store.settings.showMarkedOnly ?? true;
   sortBy         = store.settings.sortBy         ?? 'soon';
+  viewMode       = store.settings.viewMode       ?? 'card';
 }
 
 function saveStore() {
@@ -2111,6 +2173,7 @@ function renderMain() {
   document.getElementById('statTotal').textContent       = analyses.length;
   document.getElementById('statsBar').style.display      = 'flex';
   renderOnThisDay();
+  if (viewMode === 'cal') { renderCalendar(); return; }
 
   const content = document.getElementById('mainContent');
   content.innerHTML = '';
@@ -2229,6 +2292,194 @@ function toggleOnThisDay() {
   const open = !otdIsOpen();
   try { localStorage.setItem('km_otd_open', open ? '1' : '0'); } catch (e) {}
   renderOnThisDay();
+}
+
+// ─── カレンダー（自CHの配信・動画・予定枠） ─────────────────
+// カードの絞り込み（表示・★のみ）と並びは使わず、検索だけ効かせる。
+// 日付は JST。配信は実際の開始時刻、予定枠は予定時刻で置く
+const CAL_UPCOMING_MAX_DAYS = 60;  // これより先の予定はフリーチャット等の常設枠なので出さない
+let calAnchor = null;  // 表示中の基準日（JST の暦日を Date.UTC(y, m, d) で表す）。月表示はその月、週表示はその週
+let calSelId = null;   // 詳細を開いている動画
+
+function setViewMode(mode) {
+  viewMode = mode;
+  store.settings.viewMode = mode;
+  saveStore();
+  applyViewModeUi();
+  renderMain();
+}
+
+function applyViewModeUi() {
+  const cal = viewMode === 'cal';
+  document.getElementById('vCard').classList.toggle('active', !cal);
+  document.getElementById('vCal').classList.toggle('active', cal);
+  document.getElementById('rowFilter').style.display = cal ? 'none' : '';
+  document.getElementById('rowSort').style.display   = cal ? 'none' : '';
+}
+
+function jstParts(ms) {
+  const d = new Date(ms + JST_MS);
+  return { y: d.getUTCFullYear(), m: d.getUTCMonth(), d: d.getUTCDate(),
+           hh: String(d.getUTCHours()).padStart(2, '0'), mm: String(d.getUTCMinutes()).padStart(2, '0') };
+}
+
+function calendarItems() {
+  const own = store.settings.ownChannelId;
+  const terms = searchQuery.trim().split(/\s+/).map(normSearch).filter(Boolean);
+  const limit = Date.now() + CAL_UPCOMING_MAX_DAYS * 86400000;
+  const items = [];
+  for (const [id, v] of Object.entries(store.videos)) {
+    if (!own || v.channelId !== own) continue;
+    const live = v.live || {};
+    const kind = live.state === 'upcoming' ? 'upcoming' : live.state === 'live' ? 'live' : 'done';
+    if (!live.start && kind === 'done' && (v.duration || 0) <= SHORT_MAX_SEC) continue;  // ショート
+    const ms = Date.parse(live.start || (kind === 'upcoming' && live.scheduled) || v.publishedAt);
+    if (isNaN(ms) || ms > limit) continue;
+    if (terms.length && !terms.every(w => normSearch(v.title || '').includes(w))) continue;
+    items.push({ id, v, kind, ms, ...jstParts(ms) });
+  }
+  return items.sort((a, b) => a.ms - b.ms);
+}
+
+function calSpan() { return store.settings.calSpan === 'week' ? 'week' : 'month'; }
+function calSetSpan(span) {
+  store.settings.calSpan = span;
+  saveStore();
+  calSelId = null;
+  renderCalendar();
+}
+function calShift(delta) {
+  const a = new Date(calAnchor);
+  calAnchor = calSpan() === 'week'
+    ? calAnchor + delta * 7 * 86400000
+    : Date.UTC(a.getUTCFullYear(), a.getUTCMonth() + delta, 1);
+  calSelId = null;
+  renderCalendar();
+}
+function calJump(y, m) { calAnchor = Date.UTC(+y, +m, 1); calSelId = null; renderCalendar(); }
+function calToday() { const t = jstParts(Date.now()); calAnchor = Date.UTC(t.y, t.m, t.d); calSelId = null; renderCalendar(); }
+function calSelect(id) { calSelId = calSelId === id ? null : id; renderCalendar(); }
+
+function renderCalendar() {
+  const content = document.getElementById('mainContent');
+  const items = calendarItems();
+  const today = jstParts(Date.now());
+  if (calAnchor === null) calAnchor = Date.UTC(today.y, today.m, today.d);
+  const span = calSpan();
+  const anchor = new Date(calAnchor);
+  const y = anchor.getUTCFullYear(), m = anchor.getUTCMonth();
+
+  // 年の選択肢はデータの最初の年から来年まで
+  const firstYear = items.length ? items[0].y : today.y;
+  const years = [];
+  for (let yy = firstYear; yy <= today.y + 1; yy++) years.push(yy);
+  if (!years.includes(y)) years.push(y);
+
+  const byDay = {};
+  for (const it of items) if (it.y === y && it.m === m) (byDay[it.d] ||= []).push(it);
+
+  // 日曜始まり。前後の月の日は空マスで埋める
+  const startDow = new Date(Date.UTC(y, m, 1)).getUTCDay();
+  const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const cells = [];
+  for (let i = 0; i < startDow; i++) cells.push(null);
+  for (let d = 1; d <= days; d++) cells.push(d);
+  while (cells.length % 7) cells.push(null);
+
+  let html = `
+    <div class="cal-nav">
+      <div class="seg">
+        <button class="tbtn${span === 'month' ? ' active' : ''}" onclick="calSetSpan('month')">月</button>
+        <button class="tbtn${span === 'week' ? ' active' : ''}" onclick="calSetSpan('week')">週</button>
+      </div>
+      <button class="tbtn" onclick="calShift(-1)">◀</button>
+      <select onchange="calJump(this.value, ${m})">${years.map(yy => `<option value="${yy}"${yy === y ? ' selected' : ''}>${yy}年</option>`).join('')}</select>
+      <select onchange="calJump(${y}, this.value)">${Array.from({ length: 12 }, (_, i) => `<option value="${i}"${i === m ? ' selected' : ''}>${i + 1}月</option>`).join('')}</select>
+      <button class="tbtn" onclick="calShift(1)">▶</button>
+      <button class="tbtn" onclick="calToday()">今日</button>
+    </div>`;
+
+  if (span === 'week') {
+    content.innerHTML = `<div class="cal">${html}${calWeekHtml(items, today)}</div>`;
+    return;
+  }
+
+  html += `
+    <div class="cal-grid">
+      ${['日','月','火','水','木','金','土'].map((w, i) => `<div class="cal-dow${i === 0 ? ' sun' : i === 6 ? ' sat' : ''}">${w}</div>`).join('')}`;
+
+  for (let w = 0; w < cells.length; w += 7) {
+    let sel = null;
+    for (const d of cells.slice(w, w + 7)) {
+      if (d === null) { html += '<div class="cal-cell out"></div>'; continue; }
+      const isToday = y === today.y && m === today.m && d === today.d;
+      const list = byDay[d] || [];
+      html += `<div class="cal-cell${isToday ? ' today' : ''}"><div class="cal-day">${d}</div>` +
+        list.map(it => {
+          if (it.id === calSelId) sel = it;
+          return `<img class="cal-thumb${it.kind === 'upcoming' ? ' upcoming' : ''}${it.id === calSelId ? ' sel' : ''}"
+                    src="${escHtml(it.v.thumbnail || '')}" alt="" loading="lazy" onclick="calSelect('${it.id}')">`;
+        }).join('') + '</div>';
+    }
+    if (sel) html += calDetailHtml(sel);
+  }
+  html += '</div>';
+  if (!items.length && searchQuery.trim()) html += '<div class="empty-msg">該当する配信・動画がありません</div>';
+
+  content.innerHTML = `<div class="cal">${html}</div>`;
+}
+
+function calWeekHtml(items, today) {
+  const start = calAnchor - new Date(calAnchor).getUTCDay() * 86400000;  // 日曜
+  const DOW = ['日','月','火','水','木','金','土'];
+  let html = '<div class="cal-week">';
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(start + i * 86400000);
+    const y = day.getUTCFullYear(), m = day.getUTCMonth(), d = day.getUTCDate();
+    const isToday = y === today.y && m === today.m && d === today.d;
+    const list = items.filter(it => it.y === y && it.m === m && it.d === d);
+    html += `
+      <div class="cal-wday${isToday ? ' today' : ''}">
+        <div class="cal-wday-head${i === 0 ? ' sun' : i === 6 ? ' sat' : ''}">${m + 1}/${d}（${DOW[i]}）</div>
+        ${list.length ? list.map(it => {
+          const v = it.v, live = v.live || {};
+          const badge = it.kind === 'upcoming' ? '<span class="cal-badge">予定</span>'
+                      : it.kind === 'live'     ? '<span class="cal-badge">配信中</span>' : '';
+          const len = it.kind === 'done' ? fmtDuration(live.seconds || v.duration) : '';
+          const hist = v.history || [];
+          const views = it.kind === 'done' && hist.length ? `${fmtViews(hist[hist.length - 1].views)}回再生` : '';
+          return `
+            <a class="otd-item" href="https://www.youtube.com/watch?v=${it.id}" target="_blank" rel="noopener">
+              <div class="cal-wtime">${it.hh}:${it.mm}</div>
+              <img class="otd-thumb${it.kind === 'upcoming' ? ' upcoming' : ''}" src="${escHtml(v.thumbnail || '')}" alt="" loading="lazy">
+              <div class="cal-wbody">
+                <div class="otd-title">${escHtml(v.title || '')}</div>
+                <div class="cal-detail-meta">${badge}${[len, views].filter(Boolean).join(' · ')}</div>
+              </div>
+            </a>`;
+        }).join('') : '<div class="cal-wnone">—</div>'}
+      </div>`;
+  }
+  return html + '</div>';
+}
+
+function calDetailHtml(it) {
+  const v = it.v, live = v.live || {};
+  const badge = it.kind === 'upcoming' ? '<span class="cal-badge">予定</span>'
+              : it.kind === 'live'     ? '<span class="cal-badge">配信中</span>' : '';
+  const len = it.kind === 'done' ? fmtDuration(live.seconds || v.duration) : '';
+  const hist = v.history || [];
+  const views = it.kind === 'done' && hist.length ? `${fmtViews(hist[hist.length - 1].views)}回再生` : '';
+  const meta = [`${it.m + 1}/${it.d} ${it.hh}:${it.mm}${it.kind === 'upcoming' ? ' 予定' : ''}`, len, views].filter(Boolean).join(' · ');
+  return `
+    <div class="cal-detail">
+      <img src="${escHtml(v.thumbnail || '')}" alt="">
+      <div class="cal-detail-body">
+        <a class="cal-detail-title" href="https://www.youtube.com/watch?v=${it.id}" target="_blank" rel="noopener">${escHtml(v.title || '')}</a>
+        <div class="cal-detail-meta">${badge}${meta}</div>
+      </div>
+      <button class="cal-close" onclick="calSelect('${it.id}')" title="閉じる">✕</button>
+    </div>`;
 }
 
 // ─── 更新処理 ───────────────────────────────────────────
@@ -2504,6 +2755,7 @@ document.getElementById('sViews').classList.toggle('active',  sortBy === 'views'
 document.getElementById('sDate').classList.toggle('active',   sortBy === 'date');
 document.getElementById('sSoon').classList.toggle('active',   sortBy === 'soon');
 document.getElementById('sTrend').classList.toggle('active',  sortBy === 'trend');
+applyViewModeUi();
 if (!IS_PUBLIC_MODE) updatePageTitle(); // 公開モードはfetch完了後に呼ぶ
 updateNotifBtn();
 updateThemeBtn();
